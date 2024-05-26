@@ -1,0 +1,24 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "lab1 (gdb launch)",
+            "type": "gdb",
+            "request": "launch",
+            "target": "./build/lab1/lab1.exe",
+            "cwd": "${workspaceRoot}",
+            "valuesFormatting": "parseText"
+        },
+        {
+            "name": "lab2 (gdb launch)",
+            "type": "gdb",
+            "request": "launch",
+            "target": "./build/lab2/lab2.exe",
+            "cwd": "${workspaceRoot}",
+            "valuesFormatting": "parseText"
+        }
+    ]
+}

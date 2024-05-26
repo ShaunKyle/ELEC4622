@@ -1,0 +1,18 @@
+# Project configuration for clangd
+# https://clangd.llvm.org/config
+
+#############################
+# Actual important settings #
+#############################
+
+# lol no.
+
+##################
+# Personal taste #
+##################
+
+# I think that inlay hints for parameter names in function calls are very 
+# annoying.
+# Maybe I'll try enabling some of the other behaviours at some point.
+InlayHints:
+    Enabled: No

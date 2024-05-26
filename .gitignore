@@ -1,0 +1,7 @@
+# Build
+build
+.venv
+
+# clangd (C/C++ language server)
+.cache
+compile_commands.json
