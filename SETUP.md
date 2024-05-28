@@ -38,11 +38,19 @@ pipx install compiledb
 
 ## Setting up VSCode as a C/C++ development environment
 
-All you need is a text editor and a terminal. And maybe a vertical ruler to 
-help enforce an 80 character line limit that keeps source files readable.
+Add a vertical ruler to help enforce an 80 character line limit. This will help 
+keep source files readable.
 
-JKJK, here's a list of 999+ extensions to download and the latest AI coding 
-assistant you'll need a subscription for:
+`View -> Command Palette`, type in "Preferences: Open Settings (JSON)", add the 
+following to `settings.json`:
+
+```json
+"editor.rulers": [
+     80
+],
+```
+
+Some helpful extensions for C/C++ development:
 
 - [clangd](https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.vscode-clangd)
 - [Native Debug](https://open-vsx.org/extension/webfreak/debug)
