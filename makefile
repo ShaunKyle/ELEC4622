@@ -34,7 +34,7 @@
 # https://github.com/Wingus-Dingus-Robotics/WDR-Spin-Up/blob/main/makefile
 
 # Ensure that phony targets are not interpreted as file or directory names
-.PHONY: all, clean, test, check, lab1, lab2
+.PHONY: all, clean, test, check, lab1, lab2, bmpio
 
 # DEBUG=1 -> Debug mode (no optimization, produce debug info)
 # DEBUG=0 -> Release mode (full optimization, strip debug info)
@@ -94,11 +94,11 @@ SRCDIR=src
 # Executables should have `.exe` file extension on Windows.
 ifeq ($(OS),Windows_NT)
 LAB1:=$(BUILDDIR)/lab1/lab1.exe
-IOBMP:=$(BUILDDIR)/lab1/io_bmp.exe
+IOBMP:=$(BUILDDIR)/bmp_io/bmp_io.exe
 LAB2:=$(BUILDDIR)/lab2/lab2.exe
 else
 LAB1:=$(BUILDDIR)/lab1/lab1
-IOBMP:=$(BUILDDIR)/lab1/io_bmp
+IOBMP:=$(BUILDDIR)/bmp_io/bmp_io
 LAB2:=$(BUILDDIR)/lab2/lab2
 endif
 
@@ -134,15 +134,17 @@ LAB1OBJ += 	$(addsuffix .o, \
 LAB2OBJ += 	$(addsuffix .o, \
 			$(addprefix $(BUILDDIR)/lab2/, $(notdir $(basename $(LAB2SRC)))))
 
-# LAB1OBJ += $(addprefix $(BUILDDIR)/lab1/, $(notdir $(LAB1SRC:.cpp=.o)))
-# IOBMPOBJ := $(addprefix $(BUILDDIR)/lab2/, $(notdir $(IOBMPSRC:.cpp=.o)))
+IOBMPOBJ := $(addprefix $(BUILDDIR)/bmp_io/, $(notdir $(IOBMPSRC:.cpp=.o)))
+# IOBMPOBJ += $(addsuffix .o, \
+# 			$(add prefix $(BUILDDIR)/bmp_io/, \
+# 			$(notdir $(basename $(IOBMPSRC)))))
 
 #####################################################################################TODO finish this....
 
 # The prerequisites to phony target "all" are the final executables to be built.
 # Because "all" is the first target in the makefile, running the command `make`
 # in a terminal will be equivalent to `make all`.
-all: lab1 lab2
+all: lab1 lab2 bmpio
 
 # Build directory must exist as a prerequisite for every other target.
 # However, we don't want to force every target to update whenever the contents
@@ -154,9 +156,11 @@ $(BUILDDIR):
 ifeq ($(OS),Windows_NT)
 	mkdir $(BUILDDIR)\lab1
 	mkdir $(BUILDDIR)\lab2
+	mkdir $(BUILDDIR)\bmp_io
 else
 	mkdir $(BUILDDIR)/lab1
 	mkdir $(BUILDDIR)/lab2
+	mkdir $(BUILDDIR)/bmp_io
 endif
 
 # The build process for each target executable should be roughly the same:
@@ -199,6 +203,19 @@ $(BUILDDIR)/lab2/%.o: $(SRCDIR)/lab2/%.cpp | $(BUILDDIR)
 
 $(BUILDDIR)/lab2/%.o: $(SRCDIR)/lab2/*/%.cpp | $(BUILDDIR)
 	$(CPP) $(CPPFLAGS) -c -o $@ $<
+
+# Build rules for bmp_io.exe (example code for lab1)
+bmpio: $(IOBMP)
+
+$(IOBMP): $(IOBMPOBJ)
+	$(LINK) -o $@ $(IOBMPOBJ)
+
+$(BUILDDIR)/bmp_io/%.o: $(SRCDIR)/bmp_io/%.cpp | $(BUILDDIR)
+	$(CPP) $(CPPFLAGS) -c -o $@ $<
+
+$(BUILDDIR)/bmp_io/%.o: $(SRCDIR)/bmp_io/*/%.cpp | $(BUILDDIR)
+	$(CPP) $(CPPFLAGS) -c -o $@ $<
+
 
 #####################
 # Not build targets #
