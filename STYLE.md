@@ -6,12 +6,13 @@ Uh... Don't treat any single voice as gospel, I guess?
 
 I skim read this [C programming practices document](https://github.com/mcinglis/c-style) 
 by Malcolm Inglis, and I thought it was written with a good set of guiding 
-principles.
+principles. I'm liking the 80 char line limit.
 
-> Write correct, readable, simple and maintainable software, and tune it when 
-you're done...
-
-I'm liking the 80 char line limit.
+A post on Chris Wellon's (null program) blog, 
+[My personal C coding style as of late 2023](https://nullprogram.com/blog/2023/10/08/), 
+covers the reasoning behind some personal style choices he makes. I think the 
+practices related to structures (always typedef, prefer struct returns instead 
+of output parameters) are worth considering.
 
 ## C++ style
 

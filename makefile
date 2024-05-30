@@ -32,6 +32,10 @@
 # VEX Robotics have a cross-platform makefile build system for VEX V5 robots. 
 # It's split across three files: makefile, mkenv.mk and mkrules.mk
 # https://github.com/Wingus-Dingus-Robotics/WDR-Spin-Up/blob/main/makefile
+#
+# Portable makefiles... across POSIX systems. Did you know that GNU make isn't 
+# the only implementation of make?
+# https://nullprogram.com/blog/2017/08/20/
 
 # Ensure that phony targets are not interpreted as file or directory names
 .PHONY: all, clean, test, check, lab1, lab2, bmpio
