@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "shaun_bmp/bmp_io.h"
+
 // CLI help message (usage, description, options list)
 const char CLI_HELP[] = "\
 Usage: lab1 [options] <file>\n\
@@ -86,6 +88,19 @@ int main(int argc, char *argv[]) {
     printf("o = %s\n", outputFile);
 
     // TODO: Run the actual application
+    int fileErr = read_header(inputFile);
+    if (fileErr == IO_ERR_NO_FILE)
+        fprintf(stderr,"Cannot open supplied input or output file.\n");
+    else if (fileErr == IO_ERR_FILE_HEADER)
+        fprintf(stderr,"Error encountered while parsing BMP file header.\n");
+    else if (fileErr == IO_ERR_UNSUPPORTED)
+        fprintf(stderr,"Input uses an unsupported BMP file format.\n  Current "
+                "simple example supports only 8-bit and 24-bit data.\n");
+    else if (fileErr == IO_ERR_FILE_TRUNC)
+        fprintf(stderr,"Input or output file truncated unexpectedly.\n");
+    else if (fileErr == IO_ERR_FILE_NOT_OPEN)
+        fprintf(stderr,"Trying to access a file which is not open!(?)\n");
+
 
     return EXIT_SUCCESS;
 }
