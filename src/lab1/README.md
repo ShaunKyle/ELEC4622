@@ -17,3 +17,9 @@ Overview
 ## Using a debugger
 
 Red Hat Developer series on [Printf-style debugging using GDB](https://developers.redhat.com/articles/2021/10/05/printf-style-debugging-using-gdb-part-1).
+
+## Reading the bitmap file header
+
+https://learn.microsoft.com/en-us/windows/win32/gdi/device-independent-bitmaps
+
+## Accessing image data
