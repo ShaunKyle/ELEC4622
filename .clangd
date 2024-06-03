@@ -16,3 +16,14 @@
 # Maybe I'll try enabling some of the other behaviours at some point.
 InlayHints:
     Enabled: No
+
+# I would really like to disable automatic header insertion here, but some 
+# maintainers of clangd don't feel that it's necessary to add the option?
+# https://github.com/clangd/clangd/issues/2032
+#
+# Maybe I should add my opinion to the Github issue.
+# 
+# For now, need to pass the `-header-insertion=never` flag to clangd. In VSCode 
+# this is done by adding the following line to the workspace `settings.json`:
+# 
+# "clangd.arguments": [ "--header-insertion=never" ]
