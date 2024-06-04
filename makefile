@@ -233,7 +233,7 @@ endif
 
 # Detect bugs in source code using a static code analysis tool.
 check:
-	cppcheck src
+	cppcheck src --check-level=exhaustive
 
 # List dynamic dependencies required by compiled executables
 exe_list=$(LAB1) $(LAB2)
