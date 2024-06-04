@@ -81,14 +81,20 @@ int main(int argc, char *argv[]) {
         puts(CLI_HELP);
         return EXIT_FAILURE;
     }
+
+    // Give output file a default name if none provided
+    if (outputFile == NULL) {
+        outputFile = (char *) "out.bmp";
+    }
     
     // Hey look, it works!
     printf("i = %s\n", inputFile);
     printf("n = %d\n", numberOfInputs);
-    printf("o = %s\n", outputFile);
+    printf("o = %s\n\n", outputFile);
 
-    // TODO: Run the actual application
-    int fileErr = read_header(inputFile);
+    // Load input bitmap file
+    bmp input_bmp;
+    int fileErr = load_bmp(&input_bmp, inputFile);
     if (fileErr == IO_ERR_NO_FILE)
         fprintf(stderr,"Cannot open supplied input or output file.\n");
     else if (fileErr == IO_ERR_FILE_HEADER)
@@ -100,7 +106,33 @@ int main(int argc, char *argv[]) {
         fprintf(stderr,"Input or output file truncated unexpectedly.\n");
     else if (fileErr == IO_ERR_FILE_NOT_OPEN)
         fprintf(stderr,"Trying to access a file which is not open!(?)\n");
+    
+    printf("Info about %s\n", inputFile);
+    printf("Width x Height: %dx%d px\n", input_bmp.cols, input_bmp.rows);
+    printf("Components: %d\n", input_bmp.num_components);
+    printf("Line bytes: %d\n", input_bmp.line_bytes);
+    printf("Alignment padding bytes: %d\n", input_bmp.alignment_bytes);
 
+    // Create new bitmap file and write contents of inputFile into it, but make 
+    // pixels half as bright.
+    bmp output_bmp;
+    create_bmp(&output_bmp, outputFile, 
+        input_bmp.cols, input_bmp.rows, input_bmp.num_components);
+    
+    while(input_bmp.num_unaccessed_rows > 0) {
+        uint8_t *current_line = malloc(input_bmp.line_bytes);
+        int fileReadErr = read_bmp_line(&input_bmp, current_line);
+        if (fileReadErr != 0) {
+            // TODO: Handle the error...
+            puts("AAAAAAAAAAAAAAAARRRRRRRRRGGGGGGHHHH!!!!!!");
+            printf("%d\n", fileReadErr);
+            return EXIT_FAILURE;
+        }
+        // TODO: Write line to output_bmp...
+    }
+
+    close_bmp(&input_bmp);
+    close_bmp(&output_bmp);
 
     return EXIT_SUCCESS;
 }

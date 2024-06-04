@@ -10,8 +10,6 @@
 
 typedef struct bmp_header bmp_header;
 typedef struct bmp bmp;
-// struct bmp_in_state;
-// struct bmp_out_state;
 
 /////////////////
 // Error codes //
@@ -66,7 +64,7 @@ struct bmp {
     int num_unaccessed_rows;
 
     // File handle
-    FILE *file;
+    FILE * file;
 };
 
 ////////////////
@@ -74,15 +72,17 @@ struct bmp {
 ////////////////
 
 int load_bmp(bmp *bmp_info, const char *fname);
-int close_bmp(bmp *bmp_info);
-int read_bmp(bmp *bmp_info);
-int write_bmp(bmp *bmp_info);
-
-// Just testing stuff.
-int read_header(const char *fname); // TODO: remove
+int create_bmp(bmp *bmp_info, const char *fname, int width, int height, 
+               int num_components);
+void close_bmp(bmp *bmp_info);
+int read_bmp_line(bmp *bmp_info, uint8_t *line);
+int write_bmp_line(bmp *bmp_info, uint8_t *line);
 
 // TODO: Consider read/write functions that allow for random access, rather 
 //       sequential row by row?
+//       e.g. read_random(bmp, out, p1, p2), where p1 and p2 are pixel 
+//            coordinates for diagonal corners of a rectangular region?
+//            "Random (access)"  might not be the best name.
 
 // TODO: How do you initialize a blank bitmap image?
 
