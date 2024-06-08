@@ -95,17 +95,10 @@ int main(int argc, char *argv[]) {
     // Load input bitmap file
     bmp input_bmp;
     int fileErr = load_bmp(&input_bmp, inputFile);
-    if (fileErr == IO_ERR_NO_FILE)
-        fprintf(stderr,"Cannot open supplied input or output file.\n");
-    else if (fileErr == IO_ERR_FILE_HEADER)
-        fprintf(stderr,"Error encountered while parsing BMP file header.\n");
-    else if (fileErr == IO_ERR_UNSUPPORTED)
-        fprintf(stderr,"Input uses an unsupported BMP file format.\n  Current "
-                "simple example supports only 8-bit and 24-bit data.\n");
-    else if (fileErr == IO_ERR_FILE_TRUNC)
-        fprintf(stderr,"Input or output file truncated unexpectedly.\n");
-    else if (fileErr == IO_ERR_FILE_NOT_OPEN)
-        fprintf(stderr,"Trying to access a file which is not open!(?)\n");
+    if (fileErr != 0) {
+        print_bmp_file_error(fileErr);
+        return EXIT_FAILURE;
+    }
     
     printf("Info about %s\n", inputFile);
     printf("Width x Height: %dx%d px\n", input_bmp.cols, input_bmp.rows);
@@ -123,9 +116,7 @@ int main(int argc, char *argv[]) {
         uint8_t *current_line = malloc(input_bmp.line_bytes);
         int fileReadErr = read_bmp_line(&input_bmp, current_line);
         if (fileReadErr != 0) {
-            // TODO: Handle the error...
-            puts("AAAAAAAAAAAAAAAARRRRRRRRRGGGGGGHHHH!!!!!!");
-            printf("%d\n", fileReadErr);
+            print_bmp_file_error(fileErr);
             return EXIT_FAILURE;
         }
         // TODO: Write line to output_bmp...

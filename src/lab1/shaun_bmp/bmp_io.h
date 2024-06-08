@@ -71,12 +71,16 @@ struct bmp {
 // Public API //
 ////////////////
 
+// Bitmap file I/O
 int load_bmp(bmp *bmp_info, const char *fname);
 int create_bmp(bmp *bmp_info, const char *fname, int width, int height, 
                int num_components);
 void close_bmp(bmp *bmp_info);
 int read_bmp_line(bmp *bmp_info, uint8_t *line);
 int write_bmp_line(bmp *bmp_info, uint8_t *line);
+
+// Error handling
+void print_bmp_file_error(int fileErr);
 
 // TODO: Consider read/write functions that allow for random access, rather 
 //       sequential row by row?

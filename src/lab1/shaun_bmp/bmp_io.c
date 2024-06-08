@@ -276,3 +276,18 @@ int read_bmp_line(bmp *bmp_info, uint8_t *line) {
 
     return 0;
 }
+
+//! \brief Print information about error code to stderr
+void print_bmp_file_error(int fileErr) {
+    if (fileErr == IO_ERR_NO_FILE)
+        fprintf(stderr,"Cannot open supplied input or output file.\n");
+    else if (fileErr == IO_ERR_FILE_HEADER)
+        fprintf(stderr,"Error encountered while parsing BMP file header.\n");
+    else if (fileErr == IO_ERR_UNSUPPORTED)
+        fprintf(stderr,"Input uses an unsupported BMP file format.\n  Current "
+                "simple example supports only 8-bit and 24-bit data.\n");
+    else if (fileErr == IO_ERR_FILE_TRUNC)
+        fprintf(stderr,"Input or output file truncated unexpectedly.\n");
+    else if (fileErr == IO_ERR_FILE_NOT_OPEN)
+        fprintf(stderr,"Trying to access a file which is not open!(?)\n");
+}
