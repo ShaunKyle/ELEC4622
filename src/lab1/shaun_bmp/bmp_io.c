@@ -254,6 +254,10 @@ void close_bmp(bmp *bmp_info) {
     bmp_info->file = NULL;
 }
 
+//! \brief Read the next line in the bitmap image
+//!
+//! @param bmp_info Bitmap struct with file handle to read from
+//! @param line     Buffer to read line data from
 int read_bmp_line(bmp *bmp_info, uint8_t *line) {
     // Precondition: There is a line available to read.
     if ((bmp_info->file == NULL) || (bmp_info->num_unaccessed_rows <= 0)) {
@@ -271,6 +275,33 @@ int read_bmp_line(bmp *bmp_info, uint8_t *line) {
 
     // Post condition: Bytes read matches line_bytes
     if (line_bytes_read != (size_t) bmp_info->line_bytes) {
+        return IO_ERR_FILE_TRUNC;
+    }
+
+    return 0;
+}
+
+//! \brief Write the next line in the bitmap image
+//!
+//! @param bmp_info Bitmap struct with file handle to write to
+//! @param line     Buffer to write line data to
+int write_bmp_line(bmp *bmp_info, uint8_t *line) {
+    // Precondition: There is a line available to write to.
+    if ((bmp_info->file == NULL) || (bmp_info->num_unaccessed_rows <= 0)) {
+        return IO_ERR_FILE_NOT_OPEN;
+    }
+
+    // Write line to next row in file
+    size_t line_bytes_written = 
+        fwrite(line, 1, (size_t) bmp_info->line_bytes, bmp_info->file);
+    if (bmp_info->alignment_bytes > 0) {
+        uint8_t buf[3] = {0,0,0}; // Padding can be 0 to 3 bytes
+        fwrite(buf, 1, (size_t) bmp_info->alignment_bytes, bmp_info->file);
+    }
+    bmp_info->num_unaccessed_rows--;
+
+    // Postcondition: Bytes written matches line_bytes
+    if (line_bytes_written != (size_t) bmp_info->line_bytes) {
         return IO_ERR_FILE_TRUNC;
     }
 

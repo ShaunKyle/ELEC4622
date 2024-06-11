@@ -106,24 +106,58 @@ int main(int argc, char *argv[]) {
     printf("Line bytes: %d\n", input_bmp.line_bytes);
     printf("Alignment padding bytes: %d\n", input_bmp.alignment_bytes);
 
+    // What's the goal for this program? idk.
+    //
     // Create new bitmap file and write contents of inputFile into it, but make 
-    // pixels half as bright.
-    bmp output_bmp;
-    create_bmp(&output_bmp, outputFile, 
-        input_bmp.cols, input_bmp.rows, input_bmp.num_components);
-    
+    // some pixels half as bright, and some zero.
+
+    // Read every line of input image into image_data
+    int width = input_bmp.cols;
+    int height = input_bmp.rows;
+    int planes = input_bmp.num_components;
+    uint8_t *image_data = malloc(width * height * planes);
+    uint8_t *current_line_ptr = image_data; // point to start of image_data
     while(input_bmp.num_unaccessed_rows > 0) {
-        uint8_t *current_line = malloc(input_bmp.line_bytes);
-        int fileReadErr = read_bmp_line(&input_bmp, current_line);
+        int fileReadErr = read_bmp_line(&input_bmp, current_line_ptr);
         if (fileReadErr != 0) {
             print_bmp_file_error(fileErr);
             return EXIT_FAILURE;
         }
-        // TODO: Write line to output_bmp...
+        current_line_ptr += width * planes; // next line of image_data
+    }
+
+    // Modify some pixels in image_data, based on component color
+    for (int nRow = 0; nRow < height; nRow++) {
+        for (int nCol = 0; nCol < width; nCol++) {
+            int n = nRow*(width * planes) + nCol*planes;
+            if (planes == 3) {
+                image_data[n] = 0;      // blue
+                image_data[n+1] = 0;    // green
+                image_data[n+2] = (uint8_t) (image_data[n+2] * 0.5);    // red
+            }
+            else {
+                image_data[n] = (uint8_t) (image_data[n] * 0.5); // grayscale
+            }
+        }
+    }
+
+    // Write every line of image_data to output_bmp.
+    bmp output_bmp;
+    create_bmp(&output_bmp, outputFile, width, height, planes);
+    current_line_ptr = image_data;
+    while (output_bmp.num_unaccessed_rows > 0) {
+        int fileWriteErr = write_bmp_line(&output_bmp, current_line_ptr);
+        if (fileWriteErr != 0) {
+            print_bmp_file_error(fileWriteErr);
+            return EXIT_FAILURE;
+        }
+        current_line_ptr += width * planes;
     }
 
     close_bmp(&input_bmp);
     close_bmp(&output_bmp);
+
+    // This entire process was very memory inefficient, but it works.
 
     return EXIT_SUCCESS;
 }
