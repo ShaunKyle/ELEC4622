@@ -107,12 +107,22 @@ FILTEREXAMPLE:=$(BUILDDIR)/filtering_example/filter
 endif
 
 # C and C++ source and include files
+# The "shaun_bmp" library should be built for all projects
+SHAUNBMPSRC += $(wildcard $(SRCDIR)/shaun_bmp/*.c)
+SHAUNBMPSRC += $(wildcard $(SRCDIR)/shaun_bmp/*/*.c)
+SHAUNBMPSRC += $(wildcard $(SRCDIR)/shaun_bmp/*.cpp)
+SHAUNBMPSRC += $(wildcard $(SRCDIR)/shaun_bmp/*/*.cpp)
+SHAUNBMPINC += $(wildcard $(SRCDIR)/shaun_bmp/*.h)
+SHAUNBMPINC += $(wildcard $(SRCDIR)/shaun_bmp/*/*.h)
+SHAUNBMPINC += $(wildcard $(SRCDIR)/shaun_bmp/*.hpp)
+SHAUNBMPINC += $(wildcard $(SRCDIR)/shaun_bmp/*/*.hpp)
+
 LAB1SRC += $(wildcard $(SRCDIR)/lab1/*.c)
 LAB1SRC += $(wildcard $(SRCDIR)/lab1/*/*.c)
-LAB1INC += $(wildcard $(SRCDIR)/lab1/*.h)
-LAB1INC += $(wildcard $(SRCDIR)/lab1/*/*.h)
 LAB1SRC += $(wildcard $(SRCDIR)/lab1/*.cpp)
 LAB1SRC += $(wildcard $(SRCDIR)/lab1/*/*.cpp)
+LAB1INC += $(wildcard $(SRCDIR)/lab1/*.h)
+LAB1INC += $(wildcard $(SRCDIR)/lab1/*/*.h)
 LAB1INC += $(wildcard $(SRCDIR)/lab1/*.hpp)
 LAB1INC += $(wildcard $(SRCDIR)/lab1/*/*.hpp)
 
@@ -140,8 +150,9 @@ LAB1OBJ += 	$(addsuffix .o, \
 LAB2OBJ += 	$(addsuffix .o, \
 			$(addprefix $(BUILDDIR)/lab2/, $(notdir $(basename $(LAB2SRC)))))
 
-# FILTEREXAMPLEOBJ := $(addprefix $(BUILDDIR)/filtering_example/, \
-# 					$(notdir $(FILTEREXAMPLESRC:.cpp=.o)))
+SHAUNBMPOBJ += 	$(addsuffix .o, \
+				$(addprefix $(BUILDDIR)/shaun_bmp/, \
+				$(notdir $(basename $(SHAUNBMPSRC)))))
 
 FILTEREXAMPLEOBJ := $(addsuffix .o, \
 					$(addprefix $(BUILDDIR)/filtering_example/, \
@@ -164,10 +175,12 @@ $(BUILDDIR):
 ifeq ($(OS),Windows_NT)
 	mkdir $(BUILDDIR)\lab1
 	mkdir $(BUILDDIR)\lab2
+	mkdir $(BUILDDIR)\shaun_bmp
 	mkdir $(BUILDDIR)\filtering_example
 else
 	mkdir $(BUILDDIR)/lab1
 	mkdir $(BUILDDIR)/lab2
+	mkdir $(BUILDDIR)/shaun_bmp
 	mkdir $(BUILDDIR)/filtering_example
 endif
 
@@ -176,11 +189,26 @@ endif
 #    This is achieved using the `-c` flag.
 # 2. Link all of the object files together into the final executable.
 
+# Build rules for shaun_bmp.o (library dependency for other projects)
+shaun: $(SHAUNBMPOBJ)
+
+$(BUILDDIR)/shaun_bmp/%.o: $(SRCDIR)/shaun_bmp/%.c | $(BUILDDIR)
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+$(BUILDDIR)/shaun_bmp/%.o: $(SRCDIR)/shaun_bmp/*/%.c | $(BUILDDIR)
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+$(BUILDDIR)/shaun_bmp/%.o: $(SRCDIR)/shaun_bmp/%.cpp | $(BUILDDIR)
+	$(CPP) $(CPPFLAGS) -c -o $@ $<
+
+$(BUILDDIR)/shaun_bmp/%.o: $(SRCDIR)/shaun_bmp/*/%.cpp | $(BUILDDIR)
+	$(CPP) $(CPPFLAGS) -c -o $@ $<
+
 # Build rules for lab1.exe
 lab1: $(LAB1)
 
-$(LAB1): $(LAB1OBJ)
-	$(LINK) -o $@ $(LAB1OBJ)
+$(LAB1): $(LAB1OBJ) $(SHAUNBMPOBJ)
+	$(LINK) -o $@ $(LAB1OBJ) $(SHAUNBMPOBJ)
 
 $(BUILDDIR)/lab1/%.o: $(SRCDIR)/lab1/%.c | $(BUILDDIR)
 	$(CC) $(CFLAGS) -c -o $@ $<
@@ -197,8 +225,8 @@ $(BUILDDIR)/lab1/%.o: $(SRCDIR)/lab1/*/%.cpp | $(BUILDDIR)
 # Build rules for lab2.exe
 lab2: $(LAB2)
 
-$(LAB2): $(LAB2OBJ)
-	$(LINK) -o $@ $(LAB2OBJ)
+$(LAB2): $(LAB2OBJ) $(SHAUNBMPOBJ)
+	$(LINK) -o $@ $(LAB2OBJ) $(SHAUNBMPOBJ)
 
 $(BUILDDIR)/lab2/%.o: $(SRCDIR)/lab2/%.c | $(BUILDDIR)
 	$(CC) $(CFLAGS) -c -o $@ $<
