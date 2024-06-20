@@ -38,7 +38,7 @@
 # https://nullprogram.com/blog/2017/08/20/
 
 # Ensure that phony targets are not interpreted as file or directory names
-.PHONY: all, clean, test, check, lab1, lab2, bmpio
+.PHONY: all, clean, test, check, lab1, lab2, filter
 
 # DEBUG=1 -> Debug mode (no optimization, produce debug info)
 # DEBUG=0 -> Release mode (full optimization, strip debug info)
@@ -98,12 +98,12 @@ SRCDIR=src
 # Executables should have `.exe` file extension on Windows.
 ifeq ($(OS),Windows_NT)
 LAB1:=$(BUILDDIR)/lab1/lab1.exe
-IOBMP:=$(BUILDDIR)/bmp_io/bmp_io.exe
 LAB2:=$(BUILDDIR)/lab2/lab2.exe
+FILTEREXAMPLE:=$(BUILDDIR)/filtering_example/filter.exe
 else
 LAB1:=$(BUILDDIR)/lab1/lab1
-IOBMP:=$(BUILDDIR)/bmp_io/bmp_io
 LAB2:=$(BUILDDIR)/lab2/lab2
+FILTEREXAMPLE:=$(BUILDDIR)/filtering_example/filter
 endif
 
 # C and C++ source and include files
@@ -125,8 +125,10 @@ LAB2SRC += $(wildcard $(SRCDIR)/lab2/*/*.cpp)
 LAB2INC += $(wildcard $(SRCDIR)/lab2/*.hpp)
 LAB2INC += $(wildcard $(SRCDIR)/lab2/*/*.hpp)
 
-IOBMPSRC:=$(wildcard $(SRCDIR)/bmp_io/*.cpp)
-IOBMPINC:=$(wildcard $(SRCDIR)/bmp_io/*.h)
+FILTEREXAMPLESRC += $(wildcard $(SRCDIR)/filtering_example/*.cpp)
+FILTEREXAMPLESRC += $(wildcard $(SRCDIR)/filtering_example/*/*.cpp)
+FILTEREXAMPLEINC += $(wildcard $(SRCDIR)/filtering_example/*.h)
+FILTEREXAMPLEINC += $(wildcard $(SRCDIR)/filtering_example/*/*.h)
 
 # Object files to be built for each source file (both .c and .cpp)
 # - Extract just the filenames without extensions from source filepaths
@@ -138,17 +140,19 @@ LAB1OBJ += 	$(addsuffix .o, \
 LAB2OBJ += 	$(addsuffix .o, \
 			$(addprefix $(BUILDDIR)/lab2/, $(notdir $(basename $(LAB2SRC)))))
 
-IOBMPOBJ := $(addprefix $(BUILDDIR)/bmp_io/, $(notdir $(IOBMPSRC:.cpp=.o)))
-# IOBMPOBJ += $(addsuffix .o, \
-# 			$(add prefix $(BUILDDIR)/bmp_io/, \
-# 			$(notdir $(basename $(IOBMPSRC)))))
+# FILTEREXAMPLEOBJ := $(addprefix $(BUILDDIR)/filtering_example/, \
+# 					$(notdir $(FILTEREXAMPLESRC:.cpp=.o)))
+
+FILTEREXAMPLEOBJ := $(addsuffix .o, \
+					$(addprefix $(BUILDDIR)/filtering_example/, \
+					$(notdir $(basename $(FILTEREXAMPLESRC)))))
 
 #####################################################################################TODO finish this....
 
 # The prerequisites to phony target "all" are the final executables to be built.
 # Because "all" is the first target in the makefile, running the command `make`
 # in a terminal will be equivalent to `make all`.
-all: lab1 lab2 bmpio
+all: lab1 lab2 filter
 
 # Build directory must exist as a prerequisite for every other target.
 # However, we don't want to force every target to update whenever the contents
@@ -160,11 +164,11 @@ $(BUILDDIR):
 ifeq ($(OS),Windows_NT)
 	mkdir $(BUILDDIR)\lab1
 	mkdir $(BUILDDIR)\lab2
-	mkdir $(BUILDDIR)\bmp_io
+	mkdir $(BUILDDIR)\filtering_example
 else
 	mkdir $(BUILDDIR)/lab1
 	mkdir $(BUILDDIR)/lab2
-	mkdir $(BUILDDIR)/bmp_io
+	mkdir $(BUILDDIR)/filtering_example
 endif
 
 # The build process for each target executable should be roughly the same:
@@ -208,16 +212,16 @@ $(BUILDDIR)/lab2/%.o: $(SRCDIR)/lab2/%.cpp | $(BUILDDIR)
 $(BUILDDIR)/lab2/%.o: $(SRCDIR)/lab2/*/%.cpp | $(BUILDDIR)
 	$(CPP) $(CPPFLAGS) -c -o $@ $<
 
-# Build rules for bmp_io.exe (example code for lab1)
-bmpio: $(IOBMP)
+# Build rules for filter.exe (example code for lab2)
+filter: $(FILTEREXAMPLE)
 
-$(IOBMP): $(IOBMPOBJ)
-	$(LINK) -o $@ $(IOBMPOBJ)
+$(FILTEREXAMPLE): $(FILTEREXAMPLEOBJ)
+	$(LINK) -o $@ $(FILTEREXAMPLEOBJ)
 
-$(BUILDDIR)/bmp_io/%.o: $(SRCDIR)/bmp_io/%.cpp | $(BUILDDIR)
+$(BUILDDIR)/filtering_example/%.o: $(SRCDIR)/filtering_example/%.cpp | $(BUILDDIR)
 	$(CPP) $(CPPFLAGS) -c -o $@ $<
 
-$(BUILDDIR)/bmp_io/%.o: $(SRCDIR)/bmp_io/*/%.cpp | $(BUILDDIR)
+$(BUILDDIR)/filtering_example/%.o: $(SRCDIR)/filtering_example/*/%.cpp | $(BUILDDIR)
 	$(CPP) $(CPPFLAGS) -c -o $@ $<
 
 
@@ -235,7 +239,7 @@ endif
 check:
 	cppcheck src --check-level=exhaustive
 
-# List dynamic dependencies required by compiled executables
+# List dynamic dependencies required by compiled executables.
 exe_list=$(LAB1) $(LAB2)
 ldd:
 ifeq ($(OS),Windows_NT)
