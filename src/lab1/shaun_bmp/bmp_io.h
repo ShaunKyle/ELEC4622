@@ -10,6 +10,7 @@
 
 typedef struct bmp_header bmp_header;
 typedef struct bmp bmp;
+typedef struct image image;
 
 /////////////////
 // Error codes //
@@ -67,6 +68,16 @@ struct bmp {
     FILE * file;
 };
 
+struct image {
+    // Image info
+    int num_components, rows, cols;
+
+    // TODO: Boundary extension info?
+
+    // Memory
+    uint8_t *data;  // Points to start of pixel data
+};
+
 ////////////////
 // Public API //
 ////////////////
@@ -79,15 +90,12 @@ void close_bmp(bmp *bmp_info);
 int read_bmp_line(bmp *bmp_info, uint8_t *line);
 int write_bmp_line(bmp *bmp_info, uint8_t *line);
 
+// Image data
+int read_image_from_bmp(image *image_info, bmp *bmp_info);
+int export_image_as_bmp(image *image_info, const char *fname);
+// void boundary_extend_image(image *image_info, int width, int extension_method);
+
 // Error handling
 void print_bmp_file_error(int fileErr);
-
-// TODO: Consider read/write functions that allow for random access, rather 
-//       sequential row by row?
-//       e.g. read_random(bmp, out, p1, p2), where p1 and p2 are pixel 
-//            coordinates for diagonal corners of a rectangular region?
-//            "Random (access)"  might not be the best name.
-
-// TODO: How do you initialize a blank bitmap image?
 
 #endif // SHAUN_BMP_IO_H
