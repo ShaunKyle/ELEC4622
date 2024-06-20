@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "../shaun_bmp/bmp_io.h"
+#include "../shaun_bmp/image.h"
 
 // CLI help message (usage, description, options list)
 const char CLI_HELP[] = "\
