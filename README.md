@@ -1,13 +1,14 @@
 # Multimedia Signal Processing
 
-Practical implementation of signal processing algorithms in mostly C++, for the 
-course ELEC4622 "Multimedia Signal Processing" at the University of New South 
-Wales.
+Practical implementation of signal processing algorithms in C and/or modern C++ 
+(mostly C), for the course ELEC4622 "Multimedia Signal Processing" at the 
+University of New South Wales.
 
 | Application | Summary                                                       |
 |-------------|---------------------------------------------------------------|
 | lab1        | Basic read and write operations for `.bmp` images, in C.      |
 | lab2        | Implementing 2D FIR filters. SSE2-family vector instructions. |
+| project1    | Derivative of Gaussian.                                       |
 
 ## Quickstart
 
