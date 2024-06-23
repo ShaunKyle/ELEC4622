@@ -116,7 +116,7 @@ int main(int argc, char *argv[]) {
 
     // Read every line of input image into imageStore.data
     image imageStore;
-    int readErr = read_image_from_bmp(&imageStore, &input_bmp);
+    int readErr = read_image_from_bmp(&imageStore, &input_bmp, 0);
     if (readErr != 0) {
         print_bmp_file_error(readErr);
         return EXIT_FAILURE;
@@ -126,7 +126,7 @@ int main(int argc, char *argv[]) {
     const int width = imageStore.cols;
     const int height = imageStore.rows;
     const int planes = imageStore.num_components;
-    uint8_t *image_data = imageStore.data;
+    uint8_t *image_data = imageStore.buf;
     for (int nRow = 0; nRow < height; nRow++) {
         for (int nCol = 0; nCol < width; nCol++) {
             int n = nRow*(width * planes) + nCol*planes;

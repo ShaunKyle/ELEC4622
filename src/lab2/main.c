@@ -112,7 +112,7 @@ int main(int argc, char *argv[]) {
     ///////////////////////////
 
     image imageStore;
-    read_image_from_bmp(&imageStore, &input_bmp);
+    read_image_from_bmp(&imageStore, &input_bmp, 20);
 
     // TODO: Apply filter
 
