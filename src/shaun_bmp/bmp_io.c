@@ -263,7 +263,7 @@ void close_bmp(bmp *bmp_info) {
 //! \brief Read the next line in the bitmap image
 //!
 //! @param bmp_info Bitmap struct with file handle to read from
-//! @param line     Buffer to read line data from
+//! @param line     Buffer to store read line data into
 //!
 //! @return Bitmap IO_ERR
 int read_bmp_line(bmp *bmp_info, uint8_t *line) {
@@ -292,7 +292,7 @@ int read_bmp_line(bmp *bmp_info, uint8_t *line) {
 //! \brief Write the next line in the bitmap image
 //!
 //! @param bmp_info Bitmap struct with file handle to write to
-//! @param line     Buffer to write line data to
+//! @param line     Buffer to write line data from
 //!
 //! @return Bitmap IO_ERR
 int write_bmp_line(bmp *bmp_info, uint8_t *line) {
