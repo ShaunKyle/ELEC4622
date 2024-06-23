@@ -111,12 +111,14 @@ int main(int argc, char *argv[]) {
     // More interesting part //
     ///////////////////////////
 
-    image imageStore;
-    read_image_from_bmp(&imageStore, &input_bmp, 20);
+    image imageIn, imageOut;
+    read_image_from_bmp(&imageIn, &input_bmp, 1);
+    perform_boundary_extension(&imageIn);
 
     // TODO: Apply filter
+    imageOut = imageIn;
 
-    export_image_as_bmp(&imageStore, outputFile);
+    export_image_and_border_as_bmp(&imageOut, outputFile);
 
     // TODO: Handle -n flag.
 
