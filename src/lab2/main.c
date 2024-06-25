@@ -112,7 +112,7 @@ int main(int argc, char *argv[]) {
     ///////////////////////////
 
     image imageIn, imageOut;
-    read_image_from_bmp(&imageIn, &input_bmp, 4);
+    read_image_from_bmp(&imageIn, &input_bmp, 50);
     perform_boundary_extension(&imageIn);
 
     // TODO: Apply filter

@@ -201,7 +201,74 @@ int export_image_and_border_as_bmp(image *image_info, const char *fname) {
 // Image processing //
 //////////////////////
 
+//! \brief Symmetric odd extension of image boundaries
+//!
+//! The thickness of border is determined by image_info->border.
 void perform_boundary_extension(image *image_info) {
+    const int width = image_info->cols;
+    const int height = image_info->rows;
+    const int stride = image_info->stride;
+    const int border = image_info->border;
+    const int planes = image_info->num_components;
+
+    // Extend upward
+    // x[-n1, -n2] = x[n1, n2]
+    pixel_t *first_line = image_info->buf;  // Upper boundary (row 0)
+    for (int row = 1; row <= border; row++) {
+        for (int col = 0; col < width; col++) {
+            int border_index = (-row * stride + col) * planes;  // row -n
+            int image_index = (row * stride + col) * planes;    // row +n
+            if (planes == 3) {
+                first_line[border_index] = first_line[image_index];
+                first_line[border_index+1] = first_line[image_index+1];
+                first_line[border_index+2] = first_line[image_index+2];
+            } else {
+                first_line[border_index] = first_line[image_index];
+            }
+        }
+    }
+
+    // Extend downward
+    // x[(N-1)+n1, n2] = x[(N-1)-n1, n2]
+    // last_line is row (N-1)
+    pixel_t *last_line = image_info->buf + ((height-1)*stride) * planes;
+    for (int row = 1; row <= border; row++) {
+        for (int col = 0; col < width; col++) {
+            int border_index = (row * stride + col) * planes;
+            int image_index = (-row * stride + col) * planes;
+            if (planes == 3) {
+                last_line[border_index] = last_line[image_index];
+                last_line[border_index+1] = last_line[image_index+1];
+                last_line[border_index+2] = last_line[image_index+2];
+            } else {
+                last_line[border_index] = last_line[image_index];
+            }
+        }
+    }
+
+    // Extend rows left and right
+    pixel_t *left_edge = image_info->buf - ((border*stride) * planes);
+    pixel_t *right_edge = left_edge + ((width-1) * planes);
+    for (int row = 0; row < height + 2*border; row++) {
+        for (int col = 1; col <= border; col++) {
+            int left_index = (-col + row*stride) * planes;
+            int right_index = (col + row*stride) * planes;
+            if (planes == 3) {
+                left_edge[left_index] = left_edge[right_index];
+                left_edge[left_index+1] = left_edge[right_index+1];
+                left_edge[left_index+2] = left_edge[right_index+2];
+                right_edge[right_index] = right_edge[left_index];
+                right_edge[right_index+1] = right_edge[left_index+1];
+                right_edge[right_index+2] = right_edge[left_index+2];
+            } else {
+                left_edge[left_index] = left_edge[right_index];
+                right_edge[right_index] = right_edge[left_index];
+            }
+        }
+    }
+}
+
+void perform_boundary_extension_zero_padding(image *image_info) {
     const int width = image_info->cols;
     const int height = image_info->rows;
     const int stride = image_info->stride;
