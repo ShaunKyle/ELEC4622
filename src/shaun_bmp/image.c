@@ -141,8 +141,17 @@ int export_image_as_bmp(image *image_info, const char *fname) {
     return 0;
 }
 
+//! \brief Writes image data, including border extensions, to a new bitmap file
+//!
+//! Useful for debugging and illustrating border extension methods.
+//!
+//! @param image_info   Image struct with pixel data to create bmp from
+//! @param fname        Name of bitmap file to output
+//!
+//! @return Bitmap IO_ERR
 int export_image_and_border_as_bmp(image *image_info, const char *fname) {
-    const int width = image_info->cols;
+    // We use stride instead of width, to include the border.
+    // const int width = image_info->cols;
     const int height = image_info->rows;
     const int planes = image_info->num_components;
     const int stride = image_info->stride;
@@ -157,7 +166,7 @@ int export_image_and_border_as_bmp(image *image_info, const char *fname) {
     uint8_t *line_to_bmp = malloc(stride * planes);  // change from width to stride
     while (output_bmp.num_unaccessed_rows > 0) {
         // Convert pixels in current line from pixel_t to byte (uint8_t)
-        for (int col = 0; col < width; col++) {
+        for (int col = 0; col < stride; col++) {
             if (planes == 3) {
                 line_to_bmp[col*planes] = 
                     convert_from_pixel_to_byte(current_line_ptr[col*planes]);
@@ -199,19 +208,21 @@ void perform_boundary_extension(image *image_info) {
     const int border = image_info->border;
     const int planes = image_info->num_components;
 
+    const int pad = 0;  // Constant value to pad border with
+                        // TODO: symmetric extension instead
+
     // Extend upwards
     pixel_t *first_line = image_info->buf;
     for (int row = 1; row <= border; row++) {
         for (int col = 0; col < width; col++) {
             int pixel_index = (-row * stride + col) * planes;
             if (planes == 3) {
-                first_line[pixel_index] = 0;
-                first_line[pixel_index+1] = 0;
-                first_line[pixel_index+2] = 0;
+                first_line[pixel_index] = pad;
+                first_line[pixel_index+1] = pad;
+                first_line[pixel_index+2] = pad;
             } else {
-                first_line[pixel_index] = 0;
+                first_line[pixel_index] = pad;
             }
-            
         }
     }
 
@@ -221,16 +232,16 @@ void perform_boundary_extension(image *image_info) {
         for (int col = 0; col < width; col++) {
             int pixel_index = (row * stride + col) * planes;
             if (planes == 3) {
-                last_line[pixel_index] = 0;
-                last_line[pixel_index+1] = 0;
-                last_line[pixel_index+2] = 0;
+                last_line[pixel_index] = pad;
+                last_line[pixel_index+1] = pad;
+                last_line[pixel_index+2] = pad;
             } else {
-                last_line[pixel_index] = 0;
+                last_line[pixel_index] = pad;
             }
         }
     }
 
-    // Extend rows to the left and right (not working as intended)
+    // Extend rows to the left and right
     pixel_t *left_edge = image_info->buf - ((border*stride) * planes);
     pixel_t *right_edge = left_edge + ((width-1) * planes);
     for (int row = height + 2*border; row > 0; row--) {
@@ -238,16 +249,16 @@ void perform_boundary_extension(image *image_info) {
             int left_index = -col*planes;
             int right_index = col*planes;
             if (planes == 3) {
-                left_edge[left_index] = 0;
-                left_edge[left_index+1] = 0;
-                left_edge[left_index+2] = 0;
+                left_edge[left_index] = pad;
+                left_edge[left_index+1] = pad;
+                left_edge[left_index+2] = pad;
 
-                right_edge[right_index] = 0;
-                right_edge[right_index+1] = 0;
-                right_edge[right_index+2] = 0;
+                right_edge[right_index] = pad;
+                right_edge[right_index+1] = pad;
+                right_edge[right_index+2] = pad;
             } else {
-                left_edge[left_index] = 0;
-                right_edge[right_index] = 0;
+                left_edge[left_index] = pad;
+                right_edge[right_index] = pad;
             }
         }
 
