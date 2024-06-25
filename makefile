@@ -38,7 +38,7 @@
 # https://nullprogram.com/blog/2017/08/20/
 
 # Ensure that phony targets are not interpreted as file or directory names
-.PHONY: all, clean, test, check, lab1, lab2, filter
+.PHONY: all, clean, test, check, lab1, lab2, filter, project1
 
 # DEBUG=1 -> Debug mode (no optimization, produce debug info)
 # DEBUG=0 -> Release mode (full optimization, strip debug info)
@@ -100,10 +100,12 @@ ifeq ($(OS),Windows_NT)
 LAB1:=$(BUILDDIR)/lab1/lab1.exe
 LAB2:=$(BUILDDIR)/lab2/lab2.exe
 FILTEREXAMPLE:=$(BUILDDIR)/filtering_example/filter.exe
+PROJECT1:=$(BUILDDIR)/project1/project1.exe
 else
 LAB1:=$(BUILDDIR)/lab1/lab1
 LAB2:=$(BUILDDIR)/lab2/lab2
 FILTEREXAMPLE:=$(BUILDDIR)/filtering_example/filter
+PROJECT1:=$(BUILDDIR)/project1/project1
 endif
 
 # C and C++ source and include files
@@ -140,6 +142,15 @@ FILTEREXAMPLESRC += $(wildcard $(SRCDIR)/filtering_example/*/*.cpp)
 FILTEREXAMPLEINC += $(wildcard $(SRCDIR)/filtering_example/*.h)
 FILTEREXAMPLEINC += $(wildcard $(SRCDIR)/filtering_example/*/*.h)
 
+PROJECT1SRC += $(wildcard $(SRCDIR)/project1/*.c)
+PROJECT1SRC += $(wildcard $(SRCDIR)/project1/*/*.c)
+PROJECT1SRC += $(wildcard $(SRCDIR)/project1/*.cpp)
+PROJECT1SRC += $(wildcard $(SRCDIR)/project1/*/*.cpp)
+PROJECT1INC += $(wildcard $(SRCDIR)/project1/*.h)
+PROJECT1INC += $(wildcard $(SRCDIR)/project1/*/*.h)
+PROJECT1INC += $(wildcard $(SRCDIR)/project1/*.hpp)
+PROJECT1INC += $(wildcard $(SRCDIR)/project1/*/*.hpp)
+
 # Object files to be built for each source file (both .c and .cpp)
 # - Extract just the filenames without extensions from source filepaths
 # - Add the desired build directory as filepath prefix (addprefix)
@@ -158,12 +169,16 @@ FILTEREXAMPLEOBJ := $(addsuffix .o, \
 					$(addprefix $(BUILDDIR)/filtering_example/, \
 					$(notdir $(basename $(FILTEREXAMPLESRC)))))
 
+PROJECT1OBJ += 	$(addsuffix .o, \
+				$(addprefix $(BUILDDIR)/project1/, \
+				$(notdir $(basename $(PROJECT1SRC)))))
+
 #####################################################################################TODO finish this....
 
 # The prerequisites to phony target "all" are the final executables to be built.
 # Because "all" is the first target in the makefile, running the command `make`
 # in a terminal will be equivalent to `make all`.
-all: lab1 lab2 filter
+all: lab1 lab2 filter project1
 
 # Build directory must exist as a prerequisite for every other target.
 # However, we don't want to force every target to update whenever the contents
@@ -177,11 +192,13 @@ ifeq ($(OS),Windows_NT)
 	mkdir $(BUILDDIR)\lab2
 	mkdir $(BUILDDIR)\shaun_bmp
 	mkdir $(BUILDDIR)\filtering_example
+	mkdir $(BUILDDIR)\project1
 else
 	mkdir $(BUILDDIR)/lab1
 	mkdir $(BUILDDIR)/lab2
 	mkdir $(BUILDDIR)/shaun_bmp
 	mkdir $(BUILDDIR)/filtering_example
+	mkdir $(BUILDDIR)/project1
 endif
 
 # The build process for each target executable should be roughly the same:
@@ -252,6 +269,23 @@ $(BUILDDIR)/filtering_example/%.o: $(SRCDIR)/filtering_example/%.cpp | $(BUILDDI
 $(BUILDDIR)/filtering_example/%.o: $(SRCDIR)/filtering_example/*/%.cpp | $(BUILDDIR)
 	$(CPP) $(CPPFLAGS) -c -o $@ $<
 
+# Build rules for project1.exe
+project1: $(PROJECT1)
+
+$(PROJECT1): $(PROJECT1OBJ) $(SHAUNBMPOBJ)
+	$(LINK) -o $@ $(PROJECT1OBJ) $(SHAUNBMPOBJ)
+
+$(BUILDDIR)/project1/%.o: $(SRCDIR)/project1/%.c | $(BUILDDIR)
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+$(BUILDDIR)/project1/%.o: $(SRCDIR)/project1/*/%.c | $(BUILDDIR)
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+$(BUILDDIR)/project1/%.o: $(SRCDIR)/project1/%.cpp | $(BUILDDIR)
+	$(CPP) $(CPPFLAGS) -c -o $@ $<
+
+$(BUILDDIR)/project1/%.o: $(SRCDIR)/project1/*/%.cpp | $(BUILDDIR)
+	$(CPP) $(CPPFLAGS) -c -o $@ $<
 
 #####################
 # Not build targets #
