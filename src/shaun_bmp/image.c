@@ -214,6 +214,14 @@ void perform_boundary_extension(image *image_info) {
     const int border = image_info->border;
     const int planes = image_info->num_components;
 
+    // Precondition: Border thickness should be less than image dimensions
+    if ((border >= width) || (border >= height)) {
+        fprintf(stderr,
+            "Image too small/border too thick for symmetric extension.\n");
+        // TODO: return error?
+        return;
+    }
+
     // Extend upward
     // x[-n1, -n2] = x[n1, n2]
     pixel_t *first_line = image_info->buf;  // Upper boundary (row 0)
