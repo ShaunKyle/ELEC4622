@@ -8,8 +8,11 @@
 ////////////////////////////
 
 typedef struct image image;
-typedef uint8_t pixel_t;        // TODO: try float, fixed point.
-                                // see convert functions in image.c
+typedef float pixel_t;      // Normalized value (0 to 255) -> (0.0 to 1.0)
+// TODO: try fixed point.
+// see convert functions in image.c
+// When processing image, values may go outside 0-255 range. float is easy.
+// Penalties associated with floating-point are covered in Ch2, pg 15.
 
 ////////////////
 // Structures //
@@ -25,7 +28,6 @@ struct image {
     // Memory
     pixel_t *handle;    // Points to start of pixel data (including border)
     pixel_t *buf;       // Points to start of actual image data
-    // TODO: Change data type. When processing image, values may go outside 0-255 range. float is easy.
 };
 
 ////////////////

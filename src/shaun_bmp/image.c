@@ -6,12 +6,15 @@
 #include "bmp_io.h"
 
 static uint8_t convert_from_pixel_to_byte(pixel_t pixel_value) {
-    // TODO: Change this when pixel_t type changes to float or fixed point.
-    return pixel_value;
+    const int max_byte_value = 255;
+    uint8_t byte_value = (uint8_t) (pixel_value * max_byte_value);
+    return byte_value;
 }
 
 static pixel_t convert_from_byte_to_pixel(uint8_t pixel_byte) {
-    return pixel_byte;
+    const int max_byte_value = 255;
+    pixel_t float_value = (float) pixel_byte / max_byte_value;
+    return float_value;
 }
 
 
