@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <math.h>   // fabs
 
 #include "../shaun_bmp/bmp_io.h"
 #include "../shaun_bmp/image.h"
@@ -132,9 +133,40 @@ int main(int argc, char *argv[]) {
 
     if (movingAverageFlag) {
         // Moving Average filter with DC gain of 1
-        const int H = 10;    // TODO: choose for variance
-        const int DIM = (2*H+1);
-        const int TAPS = DIM * DIM;
+
+        // Determine appropriate region of support... using brute force.
+        const float target_var = sigma * sigma;
+        
+        float abs_error = 10000000000000.0; // ridiculously implausible value
+        float prev_abs_error = 0.0;
+
+        int H = 0;  // Choose region of support [-H, +H]^2
+        int DIM;
+        int TAPS;
+        while (true) {
+            DIM = (2*H+1);
+            TAPS = DIM * DIM;
+            float current_var = 0.0;
+            for (int n1 = -H; n1 < H+1; n1++) {
+                for (int n2 = -H; n2 < H+1; n2++) {
+                    current_var += (n1*n1 + n2*n2) * (1.0 / TAPS);
+                }
+            }
+            prev_abs_error = abs_error;
+            abs_error = fabs(target_var - current_var);
+            printf("H=%d has Var error of %f\n", H, abs_error);
+
+            if (abs_error > prev_abs_error) {
+                H--;
+                break;
+            } else {
+                H++;
+            }
+        }
+        printf("Chose H=%d\n\n", H);
+
+        DIM = (2*H+1);
+        TAPS = DIM * DIM;
         pixel_t psf_ma[TAPS];
 
         // Direct method
@@ -142,11 +174,12 @@ int main(int argc, char *argv[]) {
         for (int row = 0; row < DIM; row++) {
             for (int col = 0; col < DIM; col++) {
                 psf_ma[col + row*DIM] = 1.0 / TAPS;
-                printf("h[%d, %d] = %f\n", col, row, 1.0 / TAPS);
+                // printf("h[%d, %d] = %f\n", col, row, 1.0 / TAPS);
                 dc_gain += psf_ma[col + row*DIM];
             }
         }
         printf("DC gain is %f\n", dc_gain);
+        printf("Region of support is [-%d, %d]^2\n", H, H);
 
         // TODO: Separable method
         // write apply_separable_filters(in, out, psf1, psf2, extent);
