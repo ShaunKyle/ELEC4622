@@ -345,3 +345,90 @@ void perform_boundary_extension_zero_padding(image *image_info) {
     }
 
 }
+
+//! \brief Convolves an image with a point spread function (PSF)
+//!
+//! "Extent" refers to the number of elements extending from the center point 
+//! in a direction. (e.g. a 3x3 PSF has an extent of 1 in both horizontal and 
+//! vertical directions).
+//!
+//! @param image_in             Input image to convolve
+//! @param image_out            Result of convolution
+//! @param psf_values           Array of PSF values
+//! @param extent_horizontal    Horizontal extent of the PSF
+//! @param extent_vertical      Vertical extent of the PSF
+void apply_filter(image *image_in, image *image_out, pixel_t *psf_values, 
+int extent_horizontal, int extent_vertical) {
+    // Image constants
+    const int height = image_in->rows;
+    const int width = image_in->cols;
+    const int planes = image_in->num_components;
+    const int stride = image_in->stride;
+
+    // Filter constants
+    const int extent_cols = extent_horizontal;
+    const int extent_rows = extent_vertical;
+    const int dim_cols = 2*extent_horizontal + 1;   // horizontal dimension
+    // const int dim_rows = 2*extent_vertical + 1;     // vertical dimension
+    // const int taps = dim_cols * dim_rows;           // number of elements
+
+    // TODO: Precondition: Check if border is large enough for PSF overhang
+
+    // TODO: Precondition: Check if dc gain is 1
+    // sum of taps / num of taps
+
+    // Initialize output image
+    image_out->rows = height;
+    image_out->cols = width;
+    image_out->num_components = planes;
+    image_out->border = 0;
+    image_out->stride = width;
+
+    pixel_t *out_buf = malloc(height * width * planes * sizeof(pixel_t));
+    image_out->handle = out_buf;
+    image_out->buf = out_buf;
+
+    // Find center of PSF
+    pixel_t *h = psf_values + dim_cols*extent_vertical + extent_horizontal;
+
+    // Perform convolution
+    for (int row = 0; row < height; row++) {
+        for (int col = 0; col < width; col ++) {
+            // Pixel coordinate on input and output images
+            pixel_t *in_p = image_in->buf + (row*stride + col)*planes;
+            pixel_t *out_p = out_buf + (row*width + col)*planes;
+
+            // Inner product of image with mirrored PSF
+            // `h_mirror[n1, n2] = h[-n1, -n2]`
+            pixel_t sum[3] = {0,0,0};
+            for (int y = -extent_rows; y < extent_rows+1; y++) {
+                for (int x = -extent_cols; x < extent_cols+1; x++) {
+                    int index_in = (y*stride + x) * planes;
+                    int index_h = (-y*dim_cols - x); // mirrored
+                    // printf("h[%d, %d] = %f\n", x, y, h[index_h]);
+                    if (planes == 3) {
+                        sum[0] += in_p[index_in] * h[index_h];
+                        sum[1] += in_p[index_in+1] * h[index_h];
+                        sum[2] += in_p[index_in+2] * h[index_h];
+                    } else {
+                        sum[0] += in_p[index_in] * h[index_h];
+                    }
+                }
+            }
+
+            // Store result of inner product
+            if (planes == 3) {
+                out_p[0] = sum[0];
+                out_p[1] = sum[1];
+                out_p[2] = sum[2];
+            } else {
+                *out_p = sum[0];
+            }
+        }
+    }
+
+    // TODO: What about "unused" portions of border?
+    // e.g. a 1D horizontal PSF will leave the top and bottom borders untouched
+    // Keeping these values in the output image could be useful for separable
+    // filter implementation.
+}

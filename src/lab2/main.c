@@ -112,14 +112,19 @@ int main(int argc, char *argv[]) {
     ///////////////////////////
 
     image imageIn, imageOut;
-    read_image_from_bmp(&imageIn, &input_bmp, 50);
+    read_image_from_bmp(&imageIn, &input_bmp, 1);
     perform_boundary_extension(&imageIn);
 
-    // TODO: Apply filter
-    imageOut = imageIn;
+    // Apply filter
+    pixel_t filter[15] = {
+        .3,0,0,0,0,
+        0,0,.2,0,.5,
+        0,0,0,0,0
+    };
+    apply_filter(&imageIn, &imageOut, filter, 2, 1);
 
-    // export_image_as_bmp(&imageOut, outputFile);
-    export_image_and_border_as_bmp(&imageOut, outputFile);
+    export_image_as_bmp(&imageOut, outputFile);
+    // export_image_and_border_as_bmp(&imageOut, outputFile);
 
     // TODO: Handle -n flag.
 
