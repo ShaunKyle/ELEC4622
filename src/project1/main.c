@@ -9,9 +9,13 @@
 
 // CLI help message (usage, description, options list)
 const char CLI_HELP[] = "\
-Usage: project1 [options] <file> <sigma>\n\
+Usage: project1 [options] <file> <sigma> <alpha>\n\
 \n\
-Sigma is a floating point value. Default filter is Gaussian.\n\
+Performs low pass filtering and differentiation on image. \n\
+Sigma is std dev between 1.0 to 100.0\n\
+Alpha is a real-valued positive scaling factor.\n\
+\n\
+Default low pass filter is Gaussian.\n\
 \n\
 Option      Description\n\
 -o <file>   Specify output file (default: output.bmp)\n\
@@ -32,6 +36,7 @@ int main(int argc, char *argv[]) {
     // Default command options
     char * inputFile = NULL;    // <inputFile>
     float sigma = 0.0;          // <sigma>
+    float alpha = 0.0;          // <alpha>
     char * outputFile = NULL;       // -o <outputFile>
     bool movingAverageFlag = false; // -w
     int numberOfInputs = 0;         // -n <number>
@@ -70,22 +75,25 @@ int main(int argc, char *argv[]) {
         // Case 1:
         // If the first argument is not a flag, then it must be the input file.
         // The second argument will be sigma.
+        // The third argument will be alpha.
         //
         // Case 2: 
-        // If the 2nd to last argument is not an option value or a flag, then 
-        // it must be the input file (and final argument will be sigma).
+        // If the 3rd-to-last argument is not an option value or a flag, then 
+        // it must be the input file (and final args will be sigma and alpha).
         if (inputFile == NULL) {
             if ((i_arg == 1) && (currentArg == NOT_OPTION)) {
                 puts("case 1");
                 inputFile = argv[i_arg];
                 sigma = atof(argv[i_arg+1]);
+                alpha = atof(argv[i_arg+2]);
             }
-            else if ((i_arg == (argc - 2)) && 
+            else if ((i_arg == (argc - 3)) && 
             (prevArg == NOT_OPTION) && 
             (currentArg == NOT_OPTION)) {
                 puts("case 1");
                 inputFile = argv[i_arg];
                 sigma = atof(argv[i_arg+1]);
+                alpha = atof(argv[i_arg+2]);
             }
         }
 
@@ -109,6 +117,7 @@ int main(int argc, char *argv[]) {
     printf("o = %s\n\n", outputFile);
 
     printf("sigma = %f\n", sigma);
+    printf("alpha = %f\n", alpha);
     printf("w = %s\n\n", movingAverageFlag ? "Moving Average" : "Gaussian");
 
     printf("n = %d\n\n", numberOfInputs);
@@ -127,9 +136,9 @@ int main(int argc, char *argv[]) {
     printf("Line bytes: %d\n", input_bmp.line_bytes);
     printf("Alignment padding bytes: %d\n\n", input_bmp.alignment_bytes);
 
-    ///////////////////////////
-    // More interesting part //
-    ///////////////////////////
+    /////////////////////////////
+    // Task 1: Low pass filter //
+    /////////////////////////////
 
     if (movingAverageFlag) {
         // Moving Average filter with DC gain of 1
@@ -288,6 +297,12 @@ int main(int argc, char *argv[]) {
         export_image_as_bmp(&imageOut, outputFile);
 
     }
+
+    /////////////////////////////
+    // Task 2: Differentiation //
+    /////////////////////////////
+
+
 
     // TODO: Handle -n flag.
 
