@@ -219,34 +219,74 @@ int main(int argc, char *argv[]) {
         // Design Gaussian filter
         // Some reading https://homepages.inf.ed.ac.uk/rbf/HIPR2/gsmooth.htm
         // Also notes Ch2 Section 4.1 Page 24
+        // Note that sampling period for digital image processing is T = 1
         const int H = 3*sigma;   // Choose region of support [-H, +H]^2
         const int DIM = (2*H+1);
-        const int TAPS = DIM * DIM;
-        pixel_t psf_gaussian[TAPS];
+        // const int TAPS = DIM * DIM;
 
-        // Direct calculation of Gaussian PSF values
-        float dc_gain = 1.0;
-        for (int row = 0; row < DIM; row++) {
-            for (int col = 0; col < DIM; col++) {
-                const int n1 = col - H;
-                const int n2 = row - H;
-                const float scale = 1.0 / (2 * M_PI * sigma * sigma);
-                psf_gaussian[col + row*DIM] = scale * exp(
-                    -(n1*n1 + n2*n2) / (2*sigma*sigma)
-                );
-                // printf("h[%d, %d] = %f\n", col, row, 1.0 / TAPS);
-                dc_gain += psf_gaussian[col + row*DIM];
-            }
+        // // Direct calculation of 2D Gaussian PSF values
+        // pixel_t psf_gaussian[TAPS];
+        // float dc_gain = 1.0;
+        // for (int row = 0; row < DIM; row++) {
+        //     for (int col = 0; col < DIM; col++) {
+        //         const int n1 = col - H;
+        //         const int n2 = row - H;
+        //         const float scale = 1.0 / (2 * M_PI * sigma * sigma);
+        //         psf_gaussian[col + row*DIM] = scale * exp(
+        //             -(n1*n1 + n2*n2) / (2*sigma*sigma)
+        //         );
+        //         printf("h[%d, %d] = %f\n", n1, n2, psf_gaussian[col+row*DIM]);
+        //         dc_gain += psf_gaussian[col + row*DIM];
+        //     }
+        // }
+        // printf("DC gain is %f\n", dc_gain);
+        // printf("Region of support is [-%d, %d]^2\n", H, H);
+
+        // // Use Gaussian filter
+        // image imageIn, imageOut;
+        // read_image_from_bmp(&imageIn, &input_bmp, H);
+        // perform_boundary_extension(&imageIn);
+        // apply_filter(&imageIn, &imageOut, psf_gaussian, H, H);
+        // export_image_as_bmp(&imageOut, outputFile);
+
+        // Bonus-1: Separable method
+        pixel_t h_gaussian_1D[DIM];
+        float dc_gain_1D = 0.0;
+        for (int i = 0; i < DIM; i++) {
+            const int n = i - H;
+            const float scale = 1.0 / (2 * M_PI * sigma * sigma);
+            h_gaussian_1D[i] = scale * exp(-n*n / (2*sigma*sigma));
+
+            // printf("h[%d] = %f\n", n, h_gaussian_1D[i]);
+            dc_gain_1D += h_gaussian_1D[i];
         }
-        printf("DC gain is %f\n", dc_gain);
-        printf("Region of support is [-%d, %d]^2\n", H, H);
 
-        // Use Gaussian filter
+        // Hack to normalize Gaussian to have DC gain = 1
+        float dc_gain_1D_hack = 0.0;
+        for (int i = 0; i < DIM; i++) {
+            h_gaussian_1D[i] /= dc_gain_1D;
+            dc_gain_1D_hack += h_gaussian_1D[i];
+        }
+
+        float dc_gain = 0.0;
+        for (int i = 0; i < DIM; i++) {
+            dc_gain += (dc_gain_1D_hack * h_gaussian_1D[i]);
+        }
+
+        printf("h1 region of support is [-%d, %d]^2\n", H, 1);
+        printf("h2 region of support is [-%d, %d]^2\n", 1, H);
+        printf("DC gain of 1D Gaussian is %f\n", dc_gain_1D);
+        printf("DC gain of 1D Gaussian normalized is %f\n", dc_gain_1D_hack);
+        printf("Total DC gain is %f\n", dc_gain);
+
+        // Use cascaded separable Gaussian filters
         image imageIn, imageOut;
         read_image_from_bmp(&imageIn, &input_bmp, H);
         perform_boundary_extension(&imageIn);
-        apply_filter(&imageIn, &imageOut, psf_gaussian, H, H);
+        apply_separable_filters(&imageIn, &imageOut, 
+            h_gaussian_1D, h_gaussian_1D, H, H);
         export_image_as_bmp(&imageOut, outputFile);
+
     }
 
     // TODO: Handle -n flag.
