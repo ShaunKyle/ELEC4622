@@ -167,52 +167,52 @@ int main(int argc, char *argv[]) {
 
         DIM = (2*H+1);
         TAPS = DIM * DIM;
-        pixel_t psf_ma[TAPS];
+        
 
-        // Direct method
-        float dc_gain = 0;
-        for (int row = 0; row < DIM; row++) {
-            for (int col = 0; col < DIM; col++) {
-                psf_ma[col + row*DIM] = 1.0 / TAPS;
-                // printf("h[%d, %d] = %f\n", col, row, 1.0 / TAPS);
-                dc_gain += psf_ma[col + row*DIM];
-            }
-        }
-        printf("DC gain is %f\n", dc_gain);
-        printf("Region of support is [-%d, %d]^2\n", H, H);
-
-        // Use moving average filter
-        image imageIn, imageOut;
-        read_image_from_bmp(&imageIn, &input_bmp, H);
-        perform_boundary_extension(&imageIn);
-        apply_filter(&imageIn, &imageOut, psf_ma, H, H);
-        export_image_as_bmp(&imageOut, outputFile);
-
-        // // Bonus-1: Separable method
-        // // TODO: write apply_separable_filters(in, out, psf1, psf2, extent);
-        // pixel_t h1[DIM];
-        // pixel_t h2[DIM];
-        // float dc_gain_h1 = 0;
+        // // Direct method
+        // pixel_t psf_ma[TAPS];
         // float dc_gain = 0;
-        // for (int col = 0; col < DIM; col++) {
-        //     h1[col] = 1.0 / TAPS;
-        //     dc_gain_h1 += h1[col];
-        // }
         // for (int row = 0; row < DIM; row++) {
-        //     h2[row] = 1;
-        //     dc_gain += dc_gain_h1 * h2[row];
+        //     for (int col = 0; col < DIM; col++) {
+        //         psf_ma[col + row*DIM] = 1.0 / TAPS;
+        //         // printf("h[%d, %d] = %f\n", col, row, 1.0 / TAPS);
+        //         dc_gain += psf_ma[col + row*DIM];
+        //     }
         // }
+        // printf("DC gain is %f\n", dc_gain);
+        // printf("Region of support is [-%d, %d]^2\n", H, H);
 
-        // printf("h1 region of support is [-%d, %d]^2\n", H, 1);
-        // printf("h2 region of support is [-%d, %d]^2\n", 1, H);
-        // printf("Total DC gain is %f\n", dc_gain);
-
-        // // Use cascaded separable moving average filters
+        // // Use moving average filter
         // image imageIn, imageOut;
         // read_image_from_bmp(&imageIn, &input_bmp, H);
         // perform_boundary_extension(&imageIn);
-        // apply_separable_filters(&imageIn, &imageOut, h1, h2, H, H);
+        // apply_filter(&imageIn, &imageOut, psf_ma, H, H);
         // export_image_as_bmp(&imageOut, outputFile);
+
+        // Bonus-1: Separable method
+        pixel_t h1[DIM];
+        pixel_t h2[DIM];
+        float dc_gain_h1 = 0;
+        float dc_gain = 0;
+        for (int col = 0; col < DIM; col++) {
+            h1[col] = 1.0 / TAPS;
+            dc_gain_h1 += h1[col];
+        }
+        for (int row = 0; row < DIM; row++) {
+            h2[row] = 1;
+            dc_gain += dc_gain_h1 * h2[row];
+        }
+
+        printf("h1 region of support is [-%d, %d]^2\n", H, 1);
+        printf("h2 region of support is [-%d, %d]^2\n", 1, H);
+        printf("Total DC gain is %f\n", dc_gain);
+
+        // Use cascaded separable moving average filters
+        image imageIn, imageOut;
+        read_image_from_bmp(&imageIn, &input_bmp, H);
+        perform_boundary_extension(&imageIn);
+        apply_separable_filters(&imageIn, &imageOut, h1, h2, H, H);
+        export_image_as_bmp(&imageOut, outputFile);
         
     }
     else {
