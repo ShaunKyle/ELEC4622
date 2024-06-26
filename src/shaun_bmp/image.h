@@ -43,5 +43,7 @@ int export_image_and_border_as_bmp(image *image_info, const char *fname);
 void perform_boundary_extension(image *image_info);
 void apply_filter(image *image_in, image *image_out, pixel_t *psf_values, 
 int extent_horizontal, int extent_vertical);
+void apply_separable_filters(image *image_in, image *image_out, 
+pixel_t *h1_values, pixel_t *h2_values, int extent1, int extent2);
 
 #endif // SHAUN_BMP_IMAGE_H

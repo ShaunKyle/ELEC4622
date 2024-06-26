@@ -432,3 +432,134 @@ int extent_horizontal, int extent_vertical) {
     // Keeping these values in the output image could be useful for separable
     // filter implementation.
 }
+
+//! \brief Cascaded convolution of two 1D point spread functions (PSF).
+//!
+//! "Extent" refers to the number of elements extending from the center point 
+//! in a direction. (e.g. a 3x3 PSF has an extent of 1 in both horizontal and 
+//! vertical directions).
+//!
+//! @param image_in             Input image to convolve
+//! @param image_out            Result of convolution
+//! @param h1_values            Values of 1D PSF in horizontal direction
+//! @param h2_values            Values of 1D PSF in vertical direction
+//! @param extent1              Extent of h1  i.e. region of support [H1,1]
+//! @param extent1              Extent of h2  i.e. region of support [1,H2]
+void apply_separable_filters(image *image_in, image *image_out, 
+pixel_t *h1_values, pixel_t *h2_values, int extent1, int extent2) {
+    // Image constants
+    const int height = image_in->rows;
+    const int width = image_in->cols;
+    const int planes = image_in->num_components;
+    const int stride = image_in->stride;
+    const int border = image_in->border;
+
+    // Filter h1 constants
+    const int EXTENT1 = extent1;
+    // const int DIM1 = 2*EXTENT1 + 1;
+
+    // Filter h2 constants
+    const int EXTENT2 = extent2;
+    // const int DIM2 = 2*EXTENT2 + 1;
+
+    // Find center of PSF h1 and h2
+    pixel_t *h1 = h1_values + EXTENT1;
+    pixel_t *h2 = h2_values + EXTENT2;
+
+    // TODO: Precondition: Check if border is large enough for PSF overhang
+
+    // Initialize intermediate image  i.e. image_h1 = ( image_in * h1 )[n]
+    image image_h1;
+    image_h1.rows = height;
+    image_h1.cols = width;
+    image_h1.num_components = planes;
+    image_h1.border = border;   // We keep the border in this image
+    image_h1.stride = stride;   // 
+    
+    image_h1.handle = malloc(
+        (height+2*border) * stride * planes * sizeof(pixel_t));
+    image_h1.buf = image_h1.handle + (stride*border + border) * planes;
+
+    // Initialize output image
+    image_out->rows = height;
+    image_out->cols = width;
+    image_out->num_components = planes;
+    image_out->border = 0;
+    image_out->stride = width;
+
+    pixel_t *out_buf = malloc(height * width * planes * sizeof(pixel_t));
+    image_out->handle = out_buf;
+    image_out->buf = out_buf;
+
+    // Perform convolution with h1
+    // TODO: Keep border from image_in for next convolution?
+    for (int row = 0; row < height; row++) {
+        for (int col = 0; col < width; col ++) {
+            // Pixel coordinate on input and output images
+            pixel_t *in_p = image_in->buf + (row*stride + col)*planes;
+            pixel_t *out_p = image_h1.buf + (row*stride + col)*planes;
+
+            // Inner product of image with mirrored PSF
+            // `h_mirror[n1, n2] = h[-n1, -n2]`
+            // Reminder that h1 is horizontal vector
+            pixel_t sum[3] = {0,0,0};
+            for (int n = -EXTENT1; n < EXTENT1+1; n++) {
+                int index_in = (n) * planes;
+                int index_h1 = (-n); // mirrored
+                if (planes == 3) {
+                    sum[0] += in_p[index_in] * h1[index_h1];
+                    sum[1] += in_p[index_in+1] * h1[index_h1];
+                    sum[2] += in_p[index_in+2] * h1[index_h1];
+                } else {
+                    sum[0] += in_p[index_in] * h1[index_h1];
+                }
+            }
+
+            // Store result of inner product
+            if (planes == 3) {
+                out_p[0] = sum[0];
+                out_p[1] = sum[1];
+                out_p[2] = sum[2];
+            } else {
+                *out_p = sum[0];
+            }
+        }
+    }
+
+    // Hack: Just extend border again, rather than reusing border from image_in
+    perform_boundary_extension(&image_h1);
+
+    // Perform convolution with h2
+    for (int row = 0; row < height; row++) {
+        for (int col = 0; col < width; col ++) {
+            // Pixel coordinate on input and output images
+            pixel_t *in_p = image_h1.buf + (row*stride + col)*planes;
+            pixel_t *out_p = image_out->buf + (row*width + col)*planes;
+
+            // Inner product of image with mirrored PSF
+            // `h_mirror[n1, n2] = h[-n1, -n2]`
+            // Reminder that h2 is vertical vector
+            pixel_t sum[3] = {0,0,0};
+            for (int n = -EXTENT2; n < EXTENT2+1; n++) {
+                int index_in = (n*stride) * planes;
+                int index_h2 = (-n); // mirrored
+                if (planes == 3) {
+                    sum[0] += in_p[index_in] * h2[index_h2];
+                    sum[1] += in_p[index_in+1] * h2[index_h2];
+                    sum[2] += in_p[index_in+2] * h2[index_h2];
+                } else {
+                    sum[0] += in_p[index_in] * h2[index_h2];
+                }
+            }
+
+            // Store result of inner product
+            if (planes == 3) {
+                out_p[0] = sum[0];
+                out_p[1] = sum[1];
+                out_p[2] = sum[2];
+            } else {
+                *out_p = sum[0];
+            }
+        }
+    }
+}
