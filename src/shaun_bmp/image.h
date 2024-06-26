@@ -38,6 +38,8 @@ struct image {
 int read_image_from_bmp(image *image_info, bmp *bmp_info, int border);
 int export_image_as_bmp(image *image_info, const char *fname);
 int export_image_and_border_as_bmp(image *image_info, const char *fname);
+void copy_image(image *image_info, image *image_copy, int border);
+// TODO: delete_image?
 
 // Image processing
 void perform_boundary_extension(image *image_info);

@@ -199,6 +199,56 @@ int export_image_and_border_as_bmp(image *image_info, const char *fname) {
     return 0;
 }
 
+//! \brief Copy image data to a new image struct
+//!
+//! Useful when an image requires boundary extension for a filtering step
+//!
+//! @param image_info   Image to copy pixel data from
+//! @param image_copy   Image to copy pixel data to
+//! @param border       Thickness of border in pixels
+void copy_image(image *image_info, image *image_copy, int border) {
+    // Constants between the source and destination images
+    const int width = image_info->cols;
+    const int height = image_info->rows;
+    const int planes = image_info->num_components;
+
+    // Copied image info
+    image_copy->cols = width;
+    image_copy->rows = height;
+    image_copy->num_components = planes;
+    image_copy->border = border;
+    image_copy->stride = width + 2*border;
+
+    // Note: there are 2 different strides... don't mix them up.
+
+    // Allocate memory to hold boundary extended image
+    pixel_t *handle = malloc(
+        image_copy->stride * (height + 2*border) * planes * sizeof(pixel_t));
+    image_copy->handle = handle;
+    image_copy->buf = 
+        handle + (((border * image_copy->stride) + border) * planes);
+
+    // Copy image data from image_in to image_copy, one row at a time.
+    // Note: Can't copy more than a single row, because border gets in the way.
+    for (int row = 0; row < height; row++) {
+        pixel_t *source = image_info->buf + row * image_info->stride * planes;
+        pixel_t *dest = image_copy->buf + row * image_copy->stride * planes;
+        // memcpy(source, dest, width * planes * sizeof(pixel_t));
+        for (int col = 0; col < width; col++) {
+            if (planes == 3) {
+                const int n = col*planes;
+                dest[n] = source[n];
+                dest[n+1] = source[n+1];
+                dest[n+2] = source[n+2];
+            } else {
+                dest[col] = source[col];
+            }
+        }
+    }
+
+    // Remember to perform boundary extension on image_copy...
+}
+
 
 //////////////////////
 // Image processing //
