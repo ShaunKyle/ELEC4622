@@ -7,6 +7,15 @@
 
 static uint8_t convert_from_pixel_to_byte(pixel_t pixel_value) {
     const int max_byte_value = 255;
+
+    // Clip max/min pixel values to avoid numerical wrap-around.
+    if (pixel_value > 1.0) {
+        pixel_value = 1.0;
+    }
+    else if (pixel_value < 0.0) {
+        pixel_value = 0.0;
+    }
+
     uint8_t byte_value = (uint8_t) (pixel_value * max_byte_value);
     return byte_value;
 }
