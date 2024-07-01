@@ -267,7 +267,8 @@ void perform_boundary_extension(image *image_info) {
     // Precondition: Border thickness should be less than image dimensions
     if ((border >= width) || (border >= height)) {
         fprintf(stderr,
-            "Image too small/border too thick for symmetric extension.\n");
+            "%dx%d image is too small for %d thick odd symmetric border.\n", 
+            width, height, border);
         // TODO: return error?
         return;
     }
