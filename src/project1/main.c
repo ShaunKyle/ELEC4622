@@ -2,10 +2,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
-#include <math.h>   // fabs
+#include <math.h>   // fabs, exp, M_PI
 
 #include "../shaun_bmp/bmp_io.h"
 #include "../shaun_bmp/image.h"
+
+// Debug flags
+#define EXPORT_INTERMEDIATE_STEPS
 
 // CLI help message (usage, description, options list)
 const char CLI_HELP[] = "\
@@ -140,6 +143,12 @@ int main(int argc, char *argv[]) {
     // Task 1: Low pass filter //
     /////////////////////////////
 
+    //            +----------+
+    // imageIn -->| Low pass |--> imageLowPass
+    //            +----------+
+
+    image imageIn, imageLowPass;
+
     if (movingAverageFlag) {
         // Moving Average filter with DC gain of 1
 
@@ -196,7 +205,6 @@ int main(int argc, char *argv[]) {
         // read_image_from_bmp(&imageIn, &input_bmp, H);
         // perform_boundary_extension(&imageIn);
         // apply_filter(&imageIn, &imageOut, psf_ma, H, H);
-        // export_image_as_bmp(&imageOut, outputFile);
 
         // Bonus-1: Separable method
         pixel_t h1[DIM];
@@ -217,11 +225,9 @@ int main(int argc, char *argv[]) {
         printf("Total DC gain is %f\n", dc_gain);
 
         // Use cascaded separable moving average filters
-        image imageIn, imageOut;
         read_image_from_bmp(&imageIn, &input_bmp, H);
         perform_boundary_extension(&imageIn);
-        apply_separable_filters(&imageIn, &imageOut, h1, h2, H, H);
-        export_image_as_bmp(&imageOut, outputFile);
+        apply_separable_filters(&imageIn, &imageLowPass, h1, h2, H, H);
         
     }
     else {
@@ -256,7 +262,6 @@ int main(int argc, char *argv[]) {
         // read_image_from_bmp(&imageIn, &input_bmp, H);
         // perform_boundary_extension(&imageIn);
         // apply_filter(&imageIn, &imageOut, psf_gaussian, H, H);
-        // export_image_as_bmp(&imageOut, outputFile);
 
         // Bonus-1: Separable method
         pixel_t h_gaussian_1D[DIM];
@@ -289,22 +294,54 @@ int main(int argc, char *argv[]) {
         printf("Total DC gain is %f\n", dc_gain);
 
         // Use cascaded separable Gaussian filters
-        image imageIn, imageOut;
         read_image_from_bmp(&imageIn, &input_bmp, H);
         perform_boundary_extension(&imageIn);
-        apply_separable_filters(&imageIn, &imageOut, 
+        apply_separable_filters(&imageIn, &imageLowPass, 
             h_gaussian_1D, h_gaussian_1D, H, H);
-        export_image_as_bmp(&imageOut, outputFile);
 
     }
 
-    /////////////////////////////
-    // Task 2: Differentiation //
-    /////////////////////////////
+    #ifdef EXPORT_INTERMEDIATE_STEPS
+    export_image_as_bmp(&imageLowPass, "out_task1_lowpass.bmp");
+    #endif // EXPORT_INTERMEDIATE_STEPS
 
+    ////////////////////////////////////////////////////////
+    // Task 2: Approximate gradient via finite difference //
+    ////////////////////////////////////////////////////////
+    
+    // Currently, image borders are removed after filtering operations.
+    // We need to create a new image with a border before each filtering step.
+    // TODO: Can we make this more efficient?
+    //
+    //                +--------+                  +----------+
+    // imageLowPass ->| border |-> imageGradIn -->| gradient |--> imageGrad
+    //                +--------+                  +----------+
 
+    // Side note: don't try to test this with four-pixel test images. The diff
+    // of the odd symmetric border extended image will be zero...
+
+    image imageGradIn, imageGrad;
+
+    pixel_t hD_1[3] = {0.5, 0.0, -0.5};   // Hey, this has dc gain of 0...
+    pixel_t hD_2[3] = {0.5, 0.0, -0.5};
+
+    // Scale by alpha. This is necessary to "brighten" the result.
+    // If output image seems too dark, try increase alpha (e.g. 10.0)
+    for (int tap = 0; tap < 3; tap++) {
+        hD_1[tap] *= alpha;
+        hD_2[tap] *= alpha;
+    }
+    
+    copy_image(&imageLowPass, &imageGradIn, 1);
+    perform_boundary_extension(&imageGradIn);
+    apply_separable_filters(&imageGradIn, &imageGrad, hD_1, hD_2, 1, 1);
+
+    #ifdef EXPORT_INTERMEDIATE_STEPS
+    export_image_as_bmp(&imageGrad, "out_task2_grad.bmp");
+    #endif // EXPORT_INTERMEDIATE_STEPS
 
     // TODO: Handle -n flag.
+    // TODO: export_image_as_bmp(..., outputFile);
 
     return EXIT_SUCCESS;
 }
