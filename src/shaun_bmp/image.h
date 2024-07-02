@@ -45,7 +45,7 @@ void copy_image(image *image_info, image *image_copy, int border);
 // TODO: Is this pre/post processing?
 void perform_boundary_extension(image *image_info);
 void perform_level_shift(image *image_info, pixel_t shift);
-// void perform_scaling(image *image_info, float scale);
+void perform_scaling(image *image_info, float scale);
 
 // TODO: Move filtering operations to a separate file? filter.c
 void apply_filter(image *image_in, image *image_out, pixel_t *psf_values, 
