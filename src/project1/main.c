@@ -13,11 +13,12 @@
 
 // CLI help message (usage, description, options list)
 const char CLI_HELP[] = "\
-Usage: project1 [options] <file> <sigma> <alpha>\n\
+Usage: project1 [options] <file> <sigma> <alpha> <beta>\n\
 \n\
 Performs low pass filtering and differentiation on image. \n\
 Sigma is std dev between 1.0 to 100.0\n\
 Alpha is a real-valued positive scaling factor.\n\
+Beta is a real-valued positive scaling factor.\n\
 \n\
 Default low pass filter is Gaussian.\n\
 \n\
@@ -41,6 +42,7 @@ int main(int argc, char *argv[]) {
     char * inputFile = NULL;    // <inputFile>
     float sigma = 0.0;          // <sigma>
     float alpha = 0.0;          // <alpha>
+    float beta = 0.0;           // <beta>
     char * outputFile = NULL;       // -o <outputFile>
     bool movingAverageFlag = false; // -w
     int numberOfInputs = 0;         // -n <number>
@@ -80,24 +82,27 @@ int main(int argc, char *argv[]) {
         // If the first argument is not a flag, then it must be the input file.
         // The second argument will be sigma.
         // The third argument will be alpha.
+        // The fourth argument will be beta.
         //
         // Case 2: 
-        // If the 3rd-to-last argument is not an option value or a flag, then 
-        // it must be the input file (and final args will be sigma and alpha).
+        // If the 4th-to-last argument is not an option value or a flag, then 
+        // it must be the input file (final args will be sigma, alpha, beta).
         if (inputFile == NULL) {
             if ((i_arg == 1) && (currentArg == NOT_OPTION)) {
-                puts("case 1");
+                // puts("case 1");
                 inputFile = argv[i_arg];
                 sigma = atof(argv[i_arg+1]);
                 alpha = atof(argv[i_arg+2]);
+                beta = atof(argv[i_arg+3]);
             }
-            else if ((i_arg == (argc - 3)) && 
+            else if ((i_arg == (argc - 4)) && 
             (prevArg == NOT_OPTION) && 
             (currentArg == NOT_OPTION)) {
-                puts("case 1");
+                // puts("case 2");
                 inputFile = argv[i_arg];
                 sigma = atof(argv[i_arg+1]);
                 alpha = atof(argv[i_arg+2]);
+                beta = atof(argv[i_arg+3]);
             }
         }
 
@@ -122,6 +127,7 @@ int main(int argc, char *argv[]) {
 
     printf("sigma = %f\n", sigma);
     printf("alpha = %f\n", alpha);
+    printf("beta = %f\n", beta);
     printf("w = %s\n\n", movingAverageFlag ? "Moving Average" : "Gaussian");
 
     printf("n = %d\n\n", numberOfInputs);
