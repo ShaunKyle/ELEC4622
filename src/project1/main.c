@@ -366,6 +366,7 @@ int main(int argc, char *argv[]) {
     // Further reading:
     // https://hannibunny.github.io/orbook/preprocessing/04gaussianDerivatives.html
     // Course notes Ch 8 Page 7
+    // Ch 8 pg 8 Section 2.1.5 Efficient Implementation of DOG filters
 
     // The separable Gaussian low-pass filter from Task 1 combined with the 
     // finite difference derivative approximation from Task 2 to perform noise
@@ -393,11 +394,10 @@ int main(int argc, char *argv[]) {
     float dc_gain_dog_1D = 0.0;
     for (int i = 0; i < DOG_DIM; i++) {
         const int n = i - DOG_H;
-        const float scale_a = sqrt(alpha);
-        const float scale_d = - n / sqrt(sigma * sigma);
+        // const float scale_a = sqrt(alpha);
+        const float scale_d = - n / (sigma * sigma);
         const float scale_g = 1.0 / sqrt(2 * M_PI * sigma * sigma);
-        // Note: We use sqrt because filter is applied twice.
-        h_dog_1D[i] = (scale_a * scale_d * scale_g) 
+        h_dog_1D[i] = (1 * scale_d * scale_g) 
             * exp(-n*n / (2*sigma*sigma));
         
         #ifdef SHOW_TAP_VALUES
@@ -406,6 +406,16 @@ int main(int argc, char *argv[]) {
 
         dc_gain_dog_1D += h_dog_1D[i];
     }
+
+    // TODO: Try Difference of Gaussian. More efficient?
+    // See Ch 8 Section 2.1.5
+    // // 1D Gaussian
+    // pixel_t h_gaussian_1D[DOG_DIM];
+    // for (int i = 0; i < DOG_DIM; i++) {
+    //     const int n = i - DOG_H;
+    //     const float scale = 1.0 / (2 * M_PI * sigma * sigma);
+    //     h_gaussian_1D[i] = sqrt(scale) * exp(-n*n / (2*sigma*sigma));
+    // }
 
     // Check dc gain
     float dc_gain_dog_2D = 0.0;
@@ -423,6 +433,9 @@ int main(int argc, char *argv[]) {
     // apply_filter(&imageDogIn, &imageDog, h_dog_1D, DOG_H, 1);
     apply_separable_filters(&imageDogIn, &imageDog, 
         h_dog_1D, h_dog_1D, DOG_H, DOG_H);
+    
+    // Scale final image intensity by alpha
+    perform_scaling(&imageDog, alpha);
 
     #ifdef EXPORT_INTERMEDIATE_STEPS
     export_image_as_bmp(&imageDog, "out_task2_bonus_dog.bmp");
@@ -488,7 +501,50 @@ int main(int argc, char *argv[]) {
     // Task 3a Bonus: Laplacian of Gaussian //
     //////////////////////////////////////////
 
+    // Pretty much the same as what we did for Derivative of Gaussian, but take 
+    // the second derivative of the Gaussian.
+
+    //                   +---------------+
+    // imageIn (copy) -> | Separable LoG | -> imageLog
+    //                   +---------------+
+
+    puts("\nTask 3a bonus: LoG filter");
+
+    image imageLogIn, imageLog;
+
+    const int LOG_H = 3*sigma;  // Choose region of support [-H, +H]^2
+    const int LOG_DIM = (2*LOG_H+1);
+
+    // Design separable LoG filter
+    pixel_t h_log_1D[LOG_DIM];
+    for (int i = 0; i < LOG_DIM; i++) {
+        const int n = i - LOG_H;
+        const float scale_dd = (n*n) / (sigma * sigma) - 1.0;
+        const float scale_g = 1.0 / sqrt(2 * M_PI * sigma * sigma);
+        h_log_1D[i] = (scale_dd * scale_g) * exp(-n*n / (2*sigma*sigma));
+
+        #ifdef SHOW_TAP_VALUES
+        printf("h[%d] = %f\n", n, h_log_1D[i]);
+        #endif // SHOW_TAP_VALUES
+    }
+
+    printf("h1 region of support is [-%d, %d]^2\n", LOG_H, 1);
+    printf("h2 region of support is [-%d, %d]^2\n", 1, LOG_H);
+
+    copy_image(&imageIn, &imageLogIn, LOG_H);
+    perform_boundary_extension(&imageLogIn);
+    apply_separable_filters(&imageLogIn, &imageLog, 
+        h_log_1D, h_log_1D, LOG_H, LOG_H);
     
+    // Scale final image by alpha
+    perform_scaling(&imageLog, alpha);
+
+    // Level shift final image by 1/2 maximum intensity
+    perform_level_shift(&imageLog, 0.5);
+
+    #ifdef EXPORT_INTERMEDIATE_STEPS
+    export_image_as_bmp(&imageLog, "out_task3a_bonus_log.bmp");
+    #endif // EXPORT_INTERMEDIATE_STEPS
 
 
     /////////////////////////////////////////////////////////
