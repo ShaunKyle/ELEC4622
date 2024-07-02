@@ -9,6 +9,7 @@
 
 // Debug flags
 #define EXPORT_INTERMEDIATE_STEPS
+// #define SHOW_TAP_VALUES
 
 // CLI help message (usage, description, options list)
 const char CLI_HELP[] = "\
@@ -275,7 +276,9 @@ int main(int argc, char *argv[]) {
             h_gaussian_1D[i] = sqrt(scale) * exp(-n*n / (2*sigma*sigma));
             // Note: we use sqrt because filter is applied twice.
 
-            // printf("h[%d] = %f\n", n, h_gaussian_1D[i]);
+            #ifdef SHOW_TAP_VALUES
+            printf("h[%d] = %f\n", n, h_gaussian_1D[i]);
+            #endif // SHOW_TAP_VALUES
             dc_gain_1D += h_gaussian_1D[i];
         }
 
@@ -385,7 +388,10 @@ int main(int argc, char *argv[]) {
         // Note: We use sqrt because filter is applied twice.
         h_dog_1D[i] = (scale_a * scale_d * scale_g) 
             * exp(-n*n / (2*sigma*sigma));
+        
+        #ifdef SHOW_TAP_VALUES
         printf("h[%d] = %f\n", n, h_dog_1D[i]);
+        #endif // SHOW_TAP_VALUES
 
         dc_gain_dog_1D += h_dog_1D[i];
     }
