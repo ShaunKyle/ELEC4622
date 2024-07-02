@@ -140,6 +140,7 @@ int main(int argc, char *argv[]) {
     printf("Line bytes: %d\n", input_bmp.line_bytes);
     printf("Alignment padding bytes: %d\n\n", input_bmp.alignment_bytes);
 
+
     /////////////////////////////
     // Task 1: Low pass filter //
     /////////////////////////////
@@ -334,14 +335,16 @@ int main(int argc, char *argv[]) {
     const int DIFF_H = 1;
     const int DIFF_DIM = (2*DIFF_H+1);
 
-    pixel_t hD_1[DIFF_DIM] = {0.5, 0.0, -0.5};   // Hey, this has dc gain of 0...
+    pixel_t hD_1[DIFF_DIM] = {0.5, 0.0, -0.5}; // Hey, this has dc gain of 0...
     pixel_t hD_2[DIFF_DIM] = {0.5, 0.0, -0.5};
 
     // Scale by alpha. This is necessary to "brighten" the result.
     // If output image seems too dark, try increase alpha (e.g. 10.0)
-    for (int tap = 0; tap < 3; tap++) {
+    for (int tap = 0; tap < DIFF_DIM; tap++) {
+        // Scale final image by alpha by scaling filter tap values.
+        // alpha * 1 = alpha
         hD_1[tap] *= alpha;
-        hD_2[tap] *= alpha;
+        hD_2[tap] *= 1;
     }
     
     copy_image(&imageLowPass, &imageGradIn, DIFF_H);
@@ -351,6 +354,7 @@ int main(int argc, char *argv[]) {
     #ifdef EXPORT_INTERMEDIATE_STEPS
     export_image_as_bmp(&imageGrad, "out_task2_grad.bmp");
     #endif // EXPORT_INTERMEDIATE_STEPS
+
 
     //////////////////////////////////////////
     // Task 2 Bonus: Derivative of Gaussian //
@@ -421,6 +425,7 @@ int main(int argc, char *argv[]) {
     export_image_as_bmp(&imageDog, "out_task2_bonus_dog.bmp");
     #endif // EXPORT_INTERMEDIATE_STEPS
 
+
     ///////////////////////////////////
     // Task 3: Approximate Laplacian //
     ///////////////////////////////////
@@ -437,26 +442,50 @@ int main(int argc, char *argv[]) {
     // imageLapIn --> | diff | -> imageLapDiff -> | diff | --> imageLap
     //                +------+                    +------+
 
+    // Desired output image is scaled by alpha and level shifted by 1/2 maximum 
+    // intensity (128 in byte value).
+    //
+    // y[n] = alpha grad^2 x[n] + 128
+
     image imageLapIn, imageLapDiff, imageLapDiffCopy, imageLap;
+
+    // Design finite difference filter for Laplacian
+    pixel_t hD_lap_1[DIFF_DIM] = {0.5, 0.0, -0.5};
+    pixel_t hD_lap_2[DIFF_DIM] = {0.5, 0.0, -0.5};
+
+    // Scale final image by alpha
+    for (int tap = 0; tap < DIFF_DIM; tap++) {
+        // TODO: Should this be alpha/2 or sqrt(alpha)?
+        hD_lap_1[tap] *= alpha/2;
+        hD_lap_2[tap] *= 1;
+    }
 
     copy_image(&imageLowPass, &imageLapIn, DIFF_H);
     perform_boundary_extension(&imageLapIn);
     apply_separable_filters(&imageLapIn, &imageLapDiff, 
-        hD_1, hD_2, DIFF_H, DIFF_H);
+        hD_lap_1, hD_lap_2, DIFF_H, DIFF_H);
     copy_image(&imageLapDiff, &imageLapDiffCopy, DIFF_H);
     perform_boundary_extension(&imageLapDiffCopy);
     apply_separable_filters(&imageLapDiffCopy, &imageLap, 
-        hD_1, hD_2, DIFF_H, DIFF_H);
+        hD_lap_1, hD_lap_2, DIFF_H, DIFF_H);
+    
+    // Level shift final image by 1/2 maximum intensity
+    perform_level_shift(&imageLap, 0.5);
     
     #ifdef EXPORT_INTERMEDIATE_STEPS
     export_image_as_bmp(&imageLapDiff, "out_Task3_Gradient.bmp");
     export_image_as_bmp(&imageLap, "out_Task3_Laplacian.bmp");
     #endif // EXPORT_INTERMEDIATE_STEPS
 
+
     //////////////////////////////////////////
     // Task 3a Bonus: Laplacian of Gaussian //
     //////////////////////////////////////////
 
+
+    /////////////////////////////////////////////////////////
+    // Task 3b Bonus: Different operations per color plane //
+    /////////////////////////////////////////////////////////
 
 
     // TODO: Handle -n flag.
