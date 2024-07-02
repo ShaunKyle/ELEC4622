@@ -151,6 +151,7 @@ int main(int argc, char *argv[]) {
 
     if (movingAverageFlag) {
         // Moving Average filter with DC gain of 1
+        puts("Task 1: Low pass filter (moving average)");
 
         // Determine appropriate region of support... using brute force.
         const float target_var = sigma * sigma;
@@ -231,6 +232,8 @@ int main(int argc, char *argv[]) {
         
     }
     else {
+        puts("Task 1: Low pass filter (Gaussian)");
+
         // Design Gaussian filter
         // Some reading https://homepages.inf.ed.ac.uk/rbf/HIPR2/gsmooth.htm
         // Also notes Ch2 Section 4.1 Page 24
@@ -339,6 +342,85 @@ int main(int argc, char *argv[]) {
     #ifdef EXPORT_INTERMEDIATE_STEPS
     export_image_as_bmp(&imageGrad, "out_task2_grad.bmp");
     #endif // EXPORT_INTERMEDIATE_STEPS
+
+    //////////////////////////////////////////
+    // Task 2 Bonus: Derivative of Gaussian //
+    //////////////////////////////////////////
+
+    // Further reading:
+    // https://hannibunny.github.io/orbook/preprocessing/04gaussianDerivatives.html
+    // Course notes Ch 8 Page 7
+
+    // The separable Gaussian low-pass filter from Task 1 combined with the 
+    // finite difference derivative approximation from Task 2 to perform noise
+    // reduction and edge detection respectively.
+    //
+    // An alternative approach is to combine the Gaussian low-pass filtering 
+    // and differentiation into a single "Derivative of Gaussian" (DoG) filter.
+
+    // This section implements a DoG filter, which can be enabled using the
+    // TODO: decide on a flag for dog. How about -d?
+
+    //               +---------------+
+    // imageDogIn -> | Separable DoG | -> imageDog
+    //               +---------------+
+
+    puts("\nTask 2 bonus: DoG filter");
+    
+    image imageDogIn, imageDog;
+
+    const int DOG_H = 3*sigma;  // Choose region of support [-H, +H]^2
+    const int DOG_DIM = (2*DOG_H+1);
+
+    pixel_t h_dog_1D[DOG_DIM];
+    float dc_gain_dog_1D = 0.0;
+    for (int i = 0; i < DOG_DIM; i++) {
+        const int n = i - DOG_H;
+        const float scale_a = alpha;
+        const float scale_d = - n / (sigma * sigma);
+        const float scale_g = 1.0 / (2 * M_PI * sigma * sigma);
+        h_dog_1D[i] = (scale_a * scale_d * scale_g) 
+            * exp(-n*n / (2*sigma*sigma));
+        printf("h[%d] = %f\n", n, h_dog_1D[i]);
+
+        dc_gain_dog_1D += h_dog_1D[i];
+    }
+
+    // TODO: normalize using the same method as Task 1 Gaussian?
+    // Otherwise the out_task2_bonus_dog.bmp will look different to 
+    // out_task2_grad.bmp
+
+    // Check dc gain
+    float dc_gain_dog_2D = 0.0;
+    for (int i = 0; i < DOG_DIM; i++) {
+        dc_gain_dog_2D += (dc_gain_dog_1D * h_dog_1D[i]);
+    }
+
+    printf("h1 region of support is [-%d, %d]^2\n", DOG_H, 1);
+    printf("h2 region of support is [-%d, %d]^2\n", 1, DOG_H);
+    printf("DC gain of 1D DoG is %f\n", dc_gain_dog_1D);
+    printf("Total DC gain is %f\n", dc_gain_dog_2D);
+
+    copy_image(&imageIn, &imageDogIn, DOG_H);
+    // apply_filter(&imageDogIn, &imageDog, h_dog_1D, DOG_H, 1);
+    apply_separable_filters(&imageDogIn, &imageDog, 
+        h_dog_1D, h_dog_1D, DOG_H, DOG_H);
+
+    #ifdef EXPORT_INTERMEDIATE_STEPS
+    export_image_as_bmp(&imageDog, "out_task2_bonus_dog.bmp");
+    #endif // EXPORT_INTERMEDIATE_STEPS
+
+    ///////////////////////
+    // Task 3: Laplacian //
+    ///////////////////////
+
+
+
+    //////////////////////////////////////////
+    // Task 3a Bonus: Laplacian of Gaussian //
+    //////////////////////////////////////////
+
+
 
     // TODO: Handle -n flag.
     // TODO: export_image_as_bmp(..., outputFile);
