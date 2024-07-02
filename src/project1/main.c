@@ -313,6 +313,7 @@ int main(int argc, char *argv[]) {
     export_image_as_bmp(&imageLowPass, "out_task1_lowpass.bmp");
     #endif // EXPORT_INTERMEDIATE_STEPS
 
+
     ////////////////////////////////////////////////////////
     // Task 2: Approximate gradient via finite difference //
     ////////////////////////////////////////////////////////
@@ -330,8 +331,11 @@ int main(int argc, char *argv[]) {
 
     image imageGradIn, imageGrad;
 
-    pixel_t hD_1[3] = {0.5, 0.0, -0.5};   // Hey, this has dc gain of 0...
-    pixel_t hD_2[3] = {0.5, 0.0, -0.5};
+    const int DIFF_H = 1;
+    const int DIFF_DIM = (2*DIFF_H+1);
+
+    pixel_t hD_1[DIFF_DIM] = {0.5, 0.0, -0.5};   // Hey, this has dc gain of 0...
+    pixel_t hD_2[DIFF_DIM] = {0.5, 0.0, -0.5};
 
     // Scale by alpha. This is necessary to "brighten" the result.
     // If output image seems too dark, try increase alpha (e.g. 10.0)
@@ -340,9 +344,9 @@ int main(int argc, char *argv[]) {
         hD_2[tap] *= alpha;
     }
     
-    copy_image(&imageLowPass, &imageGradIn, 1);
+    copy_image(&imageLowPass, &imageGradIn, DIFF_H);
     perform_boundary_extension(&imageGradIn);
-    apply_separable_filters(&imageGradIn, &imageGrad, hD_1, hD_2, 1, 1);
+    apply_separable_filters(&imageGradIn, &imageGrad, hD_1, hD_2, DIFF_H, DIFF_H);
 
     #ifdef EXPORT_INTERMEDIATE_STEPS
     export_image_as_bmp(&imageGrad, "out_task2_grad.bmp");
@@ -408,6 +412,7 @@ int main(int argc, char *argv[]) {
     printf("Total DC gain is %f\n", dc_gain_dog_2D);
 
     copy_image(&imageIn, &imageDogIn, DOG_H);
+    perform_boundary_extension(&imageDogIn);
     // apply_filter(&imageDogIn, &imageDog, h_dog_1D, DOG_H, 1);
     apply_separable_filters(&imageDogIn, &imageDog, 
         h_dog_1D, h_dog_1D, DOG_H, DOG_H);
@@ -416,11 +421,37 @@ int main(int argc, char *argv[]) {
     export_image_as_bmp(&imageDog, "out_task2_bonus_dog.bmp");
     #endif // EXPORT_INTERMEDIATE_STEPS
 
-    ///////////////////////
-    // Task 3: Laplacian //
-    ///////////////////////
+    ///////////////////////////////////
+    // Task 3: Approximate Laplacian //
+    ///////////////////////////////////
 
+    // Step 1: High frequency noise reduction (from Task 1)
+    //
+    //             +----------+
+    // imageIn --> | Low pass | --> imageLowPass (copy to imageLapIn)
+    //             +----------+
+    //
+    // Step 2: Laplacian (by applying finite difference twice)
+    //
+    //                +------+                    +------+
+    // imageLapIn --> | diff | -> imageLapDiff -> | diff | --> imageLap
+    //                +------+                    +------+
 
+    image imageLapIn, imageLapDiff, imageLapDiffCopy, imageLap;
+
+    copy_image(&imageLowPass, &imageLapIn, DIFF_H);
+    perform_boundary_extension(&imageLapIn);
+    apply_separable_filters(&imageLapIn, &imageLapDiff, 
+        hD_1, hD_2, DIFF_H, DIFF_H);
+    copy_image(&imageLapDiff, &imageLapDiffCopy, DIFF_H);
+    perform_boundary_extension(&imageLapDiffCopy);
+    apply_separable_filters(&imageLapDiffCopy, &imageLap, 
+        hD_1, hD_2, DIFF_H, DIFF_H);
+    
+    #ifdef EXPORT_INTERMEDIATE_STEPS
+    export_image_as_bmp(&imageLapDiff, "out_Task3_Gradient.bmp");
+    export_image_as_bmp(&imageLap, "out_Task3_Laplacian.bmp");
+    #endif // EXPORT_INTERMEDIATE_STEPS
 
     //////////////////////////////////////////
     // Task 3a Bonus: Laplacian of Gaussian //
