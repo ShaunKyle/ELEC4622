@@ -338,18 +338,21 @@ int main(int argc, char *argv[]) {
     pixel_t hD_1[DIFF_DIM] = {0.5, 0.0, -0.5}; // Hey, this has dc gain of 0...
     pixel_t hD_2[DIFF_DIM] = {0.5, 0.0, -0.5};
 
-    // Scale by alpha. This is necessary to "brighten" the result.
-    // If output image seems too dark, try increase alpha (e.g. 10.0)
-    for (int tap = 0; tap < DIFF_DIM; tap++) {
-        // Scale final image by alpha by scaling filter tap values.
-        // alpha * 1 = alpha
-        hD_1[tap] *= alpha;
-        hD_2[tap] *= 1;
-    }
+    // // Scale by alpha. This is necessary to "brighten" the result.
+    // // If output image seems too dark, try increase alpha (e.g. 10.0)
+    // for (int tap = 0; tap < DIFF_DIM; tap++) {
+    //     // Scale final image by alpha by scaling filter tap values.
+    //     // alpha * 1 = alpha
+    //     hD_1[tap] *= alpha;
+    //     hD_2[tap] *= 1;
+    // }
     
     copy_image(&imageLowPass, &imageGradIn, DIFF_H);
     perform_boundary_extension(&imageGradIn);
     apply_separable_filters(&imageGradIn, &imageGrad, hD_1, hD_2, DIFF_H, DIFF_H);
+
+    // Scale final image by alpha
+    perform_scaling(&imageGrad, alpha);
 
     #ifdef EXPORT_INTERMEDIATE_STEPS
     export_image_as_bmp(&imageGrad, "out_task2_grad.bmp");
@@ -453,12 +456,12 @@ int main(int argc, char *argv[]) {
     pixel_t hD_lap_1[DIFF_DIM] = {0.5, 0.0, -0.5};
     pixel_t hD_lap_2[DIFF_DIM] = {0.5, 0.0, -0.5};
 
-    // Scale final image by alpha
-    for (int tap = 0; tap < DIFF_DIM; tap++) {
-        // TODO: Should this be alpha/2 or sqrt(alpha)?
-        hD_lap_1[tap] *= alpha/2;
-        hD_lap_2[tap] *= 1;
-    }
+    // // Scale final image by alpha
+    // for (int tap = 0; tap < DIFF_DIM; tap++) {
+    //     // TODO: Should this be alpha/2 or sqrt(alpha)?
+    //     hD_lap_1[tap] *= alpha/2;
+    //     hD_lap_2[tap] *= 1;
+    // }
 
     copy_image(&imageLowPass, &imageLapIn, DIFF_H);
     perform_boundary_extension(&imageLapIn);
@@ -469,6 +472,9 @@ int main(int argc, char *argv[]) {
     apply_separable_filters(&imageLapDiffCopy, &imageLap, 
         hD_lap_1, hD_lap_2, DIFF_H, DIFF_H);
     
+    // Scale final image by alpha
+    perform_scaling(&imageLap, alpha);
+
     // Level shift final image by 1/2 maximum intensity
     perform_level_shift(&imageLap, 0.5);
     
@@ -481,6 +487,8 @@ int main(int argc, char *argv[]) {
     //////////////////////////////////////////
     // Task 3a Bonus: Laplacian of Gaussian //
     //////////////////////////////////////////
+
+    
 
 
     /////////////////////////////////////////////////////////
