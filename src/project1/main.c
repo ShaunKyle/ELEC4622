@@ -272,28 +272,30 @@ int main(int argc, char *argv[]) {
         for (int i = 0; i < DIM; i++) {
             const int n = i - H;
             const float scale = 1.0 / (2 * M_PI * sigma * sigma);
-            h_gaussian_1D[i] = scale * exp(-n*n / (2*sigma*sigma));
+            h_gaussian_1D[i] = sqrt(scale) * exp(-n*n / (2*sigma*sigma));
+            // Note: we use sqrt because filter is applied twice.
 
             // printf("h[%d] = %f\n", n, h_gaussian_1D[i]);
             dc_gain_1D += h_gaussian_1D[i];
         }
 
-        // Hack to normalize Gaussian to have DC gain = 1
-        float dc_gain_1D_hack = 0.0;
-        for (int i = 0; i < DIM; i++) {
-            h_gaussian_1D[i] /= dc_gain_1D;
-            dc_gain_1D_hack += h_gaussian_1D[i];
-        }
+        // // Hack to normalize Gaussian to have DC gain = 1
+        // float dc_gain_1D_hack = 0.0;
+        // for (int i = 0; i < DIM; i++) {
+        //     h_gaussian_1D[i] /= dc_gain_1D;
+        //     dc_gain_1D_hack += h_gaussian_1D[i];
+        // }
 
         float dc_gain = 0.0;
         for (int i = 0; i < DIM; i++) {
-            dc_gain += (dc_gain_1D_hack * h_gaussian_1D[i]);
+            // dc_gain += (dc_gain_1D_hack * h_gaussian_1D[i]);
+            dc_gain += (dc_gain_1D * h_gaussian_1D[i]);
         }
 
         printf("h1 region of support is [-%d, %d]^2\n", H, 1);
         printf("h2 region of support is [-%d, %d]^2\n", 1, H);
         printf("DC gain of 1D Gaussian is %f\n", dc_gain_1D);
-        printf("DC gain of 1D Gaussian normalized is %f\n", dc_gain_1D_hack);
+        // printf("DC gain of 1D Gaussian normalized is %f\n", dc_gain_1D_hack);
         printf("Total DC gain is %f\n", dc_gain);
 
         // Use cascaded separable Gaussian filters
@@ -372,23 +374,21 @@ int main(int argc, char *argv[]) {
     const int DOG_H = 3*sigma;  // Choose region of support [-H, +H]^2
     const int DOG_DIM = (2*DOG_H+1);
 
+    // Design separable DoG filter
     pixel_t h_dog_1D[DOG_DIM];
     float dc_gain_dog_1D = 0.0;
     for (int i = 0; i < DOG_DIM; i++) {
         const int n = i - DOG_H;
-        const float scale_a = alpha;
-        const float scale_d = - n / (sigma * sigma);
-        const float scale_g = 1.0 / (2 * M_PI * sigma * sigma);
+        const float scale_a = sqrt(alpha);
+        const float scale_d = - n / sqrt(sigma * sigma);
+        const float scale_g = 1.0 / sqrt(2 * M_PI * sigma * sigma);
+        // Note: We use sqrt because filter is applied twice.
         h_dog_1D[i] = (scale_a * scale_d * scale_g) 
             * exp(-n*n / (2*sigma*sigma));
         printf("h[%d] = %f\n", n, h_dog_1D[i]);
 
         dc_gain_dog_1D += h_dog_1D[i];
     }
-
-    // TODO: normalize using the same method as Task 1 Gaussian?
-    // Otherwise the out_task2_bonus_dog.bmp will look different to 
-    // out_task2_grad.bmp
 
     // Check dc gain
     float dc_gain_dog_2D = 0.0;
