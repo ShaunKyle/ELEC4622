@@ -406,6 +406,35 @@ void perform_boundary_extension_zero_padding(image *image_info) {
 
 }
 
+//! \brief Shift intensity of all pixel values in image by a constant value.
+//!
+//! y[n] = x[n] + shift
+void perform_level_shift(image *image_info, pixel_t shift) {
+    const int height = image_info->rows;
+    const int stride = image_info->stride;
+    const int true_height = height + 2*image_info->border;
+    const int planes = image_info->num_components;
+
+    pixel_t *handle = image_info->handle;
+
+    for (int row = 0; row < true_height; row++) {
+        for (int col = 0; col < stride; col++) {
+            const int n = (row * stride * planes) + (col * planes);
+            for (int i = 0; i < planes; i++) {
+                handle[n+i] = handle[n+i] + shift;
+            }
+        }
+    }
+}
+
+//! \brief Scale intensity of all pixel values in image by a constant value.
+//!
+//! y[n] = scale * x[n]
+//!
+//! Note that this operation can also be achieved by scaling filter tap values.
+// TODO: Is this needed?
+// void perform_scaling()
+
 //! \brief Convolves an image with a point spread function (PSF)
 //!
 //! "Extent" refers to the number of elements extending from the center point 
