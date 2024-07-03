@@ -53,4 +53,17 @@ int extent_horizontal, int extent_vertical);
 void apply_separable_filters(image *image_in, image *image_out, 
 pixel_t *h1_values, pixel_t *h2_values, int extent1, int extent2);
 
+// TODO: rethink filter API. For now, here's separate function for applying a 
+// filter to a single component of an image
+void apply_separable_filters_to_comp(image *image_in, image *image_out, 
+pixel_t *h1_values, pixel_t *h2_values, int extent1, int extent2, 
+int component);
+// void hacky_RGB_image_splice(image *image_out, 
+// image *image_R, image *image_G, image *image_B);
+
+// I misread the task. more hacky. Also very broken.
+void hacky_combine_planes_into_RGB(image *image_out, 
+image *image_R, image *image_G, image *image_B);
+void extract_component(image *image_out, image *image_BGR, int component);
+
 #endif // SHAUN_BMP_IMAGE_H

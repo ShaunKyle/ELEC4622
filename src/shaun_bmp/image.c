@@ -1,6 +1,7 @@
 #include <stdlib.h> // malloc
 #include <stdint.h>
 #include <string.h> // memset
+#include <assert.h> // hacky preconditions for the jank function at end of file
 
 #include "image.h"
 #include "bmp_io.h"
@@ -664,6 +665,230 @@ pixel_t *h1_values, pixel_t *h2_values, int extent1, int extent2) {
             } else {
                 *out_p = sum[0];
             }
+        }
+    }
+}
+
+// Same as apply_separable_filters(), but only applie filters to a single 
+// component of the image
+void apply_separable_filters_to_comp(image *image_in, image *image_out, 
+pixel_t *h1_values, pixel_t *h2_values, int extent1, int extent2, 
+int component) {
+    // Copy paste from apply_separable_filters
+    // Yeah, it's jank. But this is due in 2 hours.
+
+    // Image constants
+    const int height = image_in->rows;
+    const int width = image_in->cols;
+    const int planes = image_in->num_components;
+    const int stride = image_in->stride;
+    const int border = image_in->border;
+
+    // Filter h1 constants
+    const int EXTENT1 = extent1;
+    // const int DIM1 = 2*EXTENT1 + 1;
+
+    // Filter h2 constants
+    const int EXTENT2 = extent2;
+    // const int DIM2 = 2*EXTENT2 + 1;
+
+    // Find center of PSF h1 and h2
+    pixel_t *h1 = h1_values + EXTENT1;
+    pixel_t *h2 = h2_values + EXTENT2;
+
+    // TODO: Precondition: Check if border is large enough for PSF overhang
+
+    // Initialize intermediate image  i.e. image_h1 = ( image_in * h1 )[n]
+    image image_h1;
+    image_h1.rows = height;
+    image_h1.cols = width;
+    image_h1.num_components = planes;
+    image_h1.border = border;   // We keep the border in this image
+    image_h1.stride = stride;   // 
+    
+    image_h1.handle = malloc(
+        (height+2*border) * stride * planes * sizeof(pixel_t));
+    image_h1.buf = image_h1.handle + (stride*border + border) * planes;
+
+    // Initialize output image
+    image_out->rows = height;
+    image_out->cols = width;
+    image_out->num_components = planes;
+    image_out->border = 0;
+    image_out->stride = width;
+
+    pixel_t *out_buf = malloc(height * width * planes * sizeof(pixel_t));
+    image_out->handle = out_buf;
+    image_out->buf = out_buf;
+
+    // Perform convolution with h1
+    // TODO: Keep border from image_in for next convolution?
+    for (int row = 0; row < height; row++) {
+        for (int col = 0; col < width; col ++) {
+            // Pixel coordinate on input and output images
+            pixel_t *in_p = image_in->buf + (row*stride + col)*planes;
+            pixel_t *out_p = image_h1.buf + (row*stride + col)*planes;
+
+            // Inner product of image with mirrored PSF
+            // `h_mirror[n1, n2] = h[-n1, -n2]`
+            // Reminder that h1 is horizontal vector
+            pixel_t sum[3] = {0,0,0};
+            for (int n = -EXTENT1; n < EXTENT1+1; n++) {
+                int index_in = (n) * planes;
+                int index_h1 = (-n); // mirrored
+                sum[component] += in_p[index_in+component] * h1[index_h1];
+            }
+
+            // Store result of inner product
+            if (planes == 3) {
+                out_p[0] = sum[0];
+                out_p[1] = sum[1];
+                out_p[2] = sum[2];
+            } else {
+                *out_p = sum[0];
+            }
+        }
+    }
+
+    // Hack: Just extend border again, rather than reusing border from image_in
+    perform_boundary_extension(&image_h1);
+
+    // Perform convolution with h2
+    for (int row = 0; row < height; row++) {
+        for (int col = 0; col < width; col ++) {
+            // Pixel coordinate on input and output images
+            pixel_t *in_p = image_h1.buf + (row*stride + col)*planes;
+            pixel_t *out_p = image_out->buf + (row*width + col)*planes;
+
+            // Inner product of image with mirrored PSF
+            // `h_mirror[n1, n2] = h[-n1, -n2]`
+            // Reminder that h2 is vertical vector
+            pixel_t sum[3] = {0,0,0};
+            for (int n = -EXTENT2; n < EXTENT2+1; n++) {
+                int index_in = (n*stride) * planes;
+                int index_h2 = (-n); // mirrored
+                sum[component] += in_p[index_in+component] * h2[index_h2];
+            }
+
+            // Store result of inner product
+            if (planes == 3) {
+                out_p[0] = sum[0];
+                out_p[1] = sum[1];
+                out_p[2] = sum[2];
+            } else {
+                *out_p = sum[0];
+            }
+        }
+    }
+}
+
+
+// // For project 1 task3b
+// // Takes a color plane from each of the input images, and splices them all 
+// // together in image_out.
+// void hacky_RGB_image_splice(image *image_out, 
+// image *image_R, image *image_G, image *image_B) {
+//     const int width = image_R->cols;
+//     const int height = image_R->rows;
+//     const int planes = 3;
+
+//     // Precondition: Check if images are the same size
+//     assert(image_B->rows == height);
+//     assert(image_G->rows == height);
+//     assert(image_B->cols == width);
+//     assert(image_G->cols == width);
+
+//     // Precondtion: Check if images have BGR planes
+//     assert(image_R->num_components == planes);
+//     assert(image_G->num_components == planes);
+//     assert(image_B->num_components == planes);
+
+//     // Initialize image_out
+//     image_out->num_components = planes;
+//     image_out->border = 0;
+//     image_out->cols = width;
+//     image_out->rows = height;
+//     image_out->handle = malloc(width * height * planes);
+//     image_out->buf = image_out->handle;
+
+//     // Extract color planes
+//     for (int row = 0; row < height; row++) {
+//         for (int col = 0; col < width; col++) {
+//             const int nB = (row*image_B->stride + col) * planes;
+//             const int nG = (row*image_G->stride + col) * planes + 1;
+//             const int nR = (row*image_R->stride + col) * planes + 2;
+
+//             // TODO: image_out index is wrong. stride = width.
+            
+//             image_out->buf[nB] = image_B->buf[nB];
+//             image_out->buf[nG] = image_G->buf[nG];
+//             image_out->buf[nR] = image_R->buf[nR];
+//         }
+//     }
+// }
+
+void extract_component(image *image_out, image *image_BGR, int component) {
+    const int width = image_BGR->cols;
+    const int height = image_BGR->rows;
+    const int planes = image_BGR->num_components;
+    const int stride = image_BGR->stride;
+
+    // Precondition: RGB image
+    assert(image_BGR->num_components == planes);
+
+    // Initialize image_out
+    image_out->num_components = 1;
+    image_out->border = 0;
+    image_out->cols = width;
+    image_out->rows = height;
+    image_out->handle = malloc(width * height * 1);
+    image_out->buf = image_out->handle;
+
+    // Extract color planes
+    for (int row = 0; row < height; row++) {
+        for (int col = 0; col < width; col++) {
+            pixel_t *in_p = image_BGR->buf + (row*stride + col)*planes + component;
+            pixel_t *out_p = image_out->buf + (row*width + col)*1;
+            *out_p = *in_p;
+
+            // const int nBGR = (row*image_BGR->stride+col) * planes + component;
+            // const int nOut = (row*width + col) * 1;
+            // image_out->buf[nOut] = image_BGR->buf[nBGR];
+            
+            
+        }
+    }
+}
+
+void hacky_combine_planes_into_RGB(image *image_out, 
+image *image_R, image *image_G, image *image_B) {
+    const int width = image_B->cols;
+    const int height = image_B->rows;
+    const int planes = 3;
+
+    assert(image_R->num_components == 1);
+    assert(image_G->num_components == 1);
+    assert(image_B->num_components == 1);
+
+    // Initialize image_out
+    image_out->num_components = planes;
+    image_out->border = 0;
+    image_out->cols = width;
+    image_out->rows = height;
+    image_out->handle = malloc(width * height * planes);
+    image_out->buf = image_out->handle;
+
+    // Combine color planes
+    for (int row = 0; row < height; row++) {
+        for (int col = 0; col < width; col++) {
+            pixel_t *inR_p = image_R->buf + (row*image_R->stride + col)*1;
+            pixel_t *inG_p = image_G->buf + (row*image_G->stride + col)*1;
+            pixel_t *inB_p = image_B->buf + (row*image_B->stride + col)*1;
+            pixel_t *out_p = image_out->buf + (row*width + col)*planes;
+            
+            out_p[0] = *inB_p;
+            out_p[1] = *inG_p;
+            out_p[2] = *inR_p;
         }
     }
 }

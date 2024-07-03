@@ -542,6 +542,32 @@ int main(int argc, char *argv[]) {
     apply_separable_filters(&imageLogIn, &imageLog, 
         h_log_1D, h_log_1D, LOG_H, LOG_H);
     
+    // // Design direct LoG filter
+    // pixel_t h_log_direct[LOG_DIM*LOG_DIM];
+    // for (int r = 0; r < LOG_DIM; r++) {
+    //     for (int c = 0; c < LOG_DIM; c++) {
+    //         const int n1 = c - LOG_H;
+    //         const int n2 = r - LOG_H;
+    //         const int i = c + r*LOG_DIM;
+            
+    //         const float term1 = 1 / (M_PI * pow(sigma, 4));
+    //         const float term2 = (n1*n1 + n2*n2) / (2*sigma*sigma) - 1;
+    //         h_log_direct[i] = (term1 * term2) * 
+    //             exp(-(n1*n1 + n2*n2) / (2*sigma*sigma));
+            
+    //         printf("h[%d, %d] = %f\n", n1, n2, h_log_direct[i]);
+    //     }
+    // }
+
+    // printf("h1 region of support is [-%d, %d]^2\n", LOG_H, 1);
+    // printf("h2 region of support is [-%d, %d]^2\n", 1, LOG_H);
+
+    // copy_image(&imageIn, &imageLogIn, LOG_H);
+    // perform_boundary_extension(&imageLogIn);
+    // apply_filter(&imageLogIn, &imageLog, h_log_direct, LOG_H, LOG_H);
+
+
+    
     // Scale final image by alpha
     perform_scaling(&imageLog, alpha);
 
@@ -557,9 +583,49 @@ int main(int argc, char *argv[]) {
     // Task 3b Bonus: Different operations per color plane //
     /////////////////////////////////////////////////////////
 
+    // Blue plane:  Original image
+    // Green plane: LoG scaled by beta 
+    // Red plane:   DoG scaled by alpha (reuse Task 2 bonus)
+
+    // For 3-component images, only process the green color plane
+
+    puts("\nTask 3b: Combined");
+
+    image imageB, imageG, imageR, imageRGB;
+    image imageG_in;
+
+    if (imageIn.num_components == 3) {
+        puts("Processing green plane only");
+        extract_component(&imageB, &imageIn, 1);
+        copy_image(&imageB, &imageG_in, LOG_H);
+        extract_component(&imageR, &imageDog, 1);
+    } else {
+        puts("Single plane");
+        copy_image(&imageIn, &imageB, 0);
+        copy_image(&imageIn, &imageG_in, LOG_H);
+        copy_image(&imageDog, &imageR, 0);
+    }
+
+    // LoG scaled by beta and level shifted by 1/2 max intensity
+    perform_boundary_extension(&imageG_in);
+    apply_separable_filters(&imageG_in, &imageG, 
+        h_log_1D, h_log_1D, LOG_H, LOG_H);
+    perform_scaling(&imageG, beta);
+    perform_level_shift(&imageG, 0.5);
+
+    // Output
+    #ifdef EXPORT_INTERMEDIATE_STEPS
+    export_image_as_bmp(&imageIn, "out_task3b_in.bmp");
+    export_image_as_bmp(&imageB, "out_task3b_blue_original.bmp");
+    export_image_as_bmp(&imageG, "out_task3b_green_LoG.bmp");
+    export_image_as_bmp(&imageR, "out_task3b_red_DoG.bmp");
+    #endif // EXPORT_INTERMEDIATE_STEPS
+
+    hacky_combine_planes_into_RGB(&imageRGB, &imageR, &imageG, &imageB);
+    export_image_as_bmp(&imageRGB, outputFile);
+
 
     // TODO: Handle -n flag.
-    // TODO: export_image_as_bmp(..., outputFile);
 
     return EXIT_SUCCESS;
 }
