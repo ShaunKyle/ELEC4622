@@ -58,6 +58,8 @@ pixel_t *h1_values, pixel_t *h2_values, int extent1, int extent2);
 void apply_separable_filters_to_comp(image *image_in, image *image_out, 
 pixel_t *h1_values, pixel_t *h2_values, int extent1, int extent2, 
 int component);
+void apply_optimized_moving_average_filter(image *image_in, image *image_out, 
+int extent1, int extent2);
 // void hacky_RGB_image_splice(image *image_out, 
 // image *image_R, image *image_G, image *image_B);
 

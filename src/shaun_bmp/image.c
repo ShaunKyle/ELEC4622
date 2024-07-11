@@ -783,6 +783,182 @@ int component) {
 }
 
 
+void apply_optimized_moving_average_filter(image *image_in, image *image_out, 
+int extent1, int extent2) {
+    // Image constants
+    const int height = image_in->rows;
+    const int width = image_in->cols;
+    const int planes = image_in->num_components;
+    const int stride = image_in->stride;
+    const int border = image_in->border;
+
+    // Filter h1 constants
+    const int EXTENT1 = extent1;
+    const int DIM1 = 2*EXTENT1 + 1;
+
+    // Filter h2 constants
+    const int EXTENT2 = extent2;
+    const int DIM2 = 2*EXTENT2 + 1;
+
+    // Find value for PSF taps
+    pixel_t h = 1.0 / (DIM1 * DIM2);
+
+    // TODO: Precondition: Check if border is large enough for PSF overhang
+
+    // Initialize intermediate image  i.e. image_h1 = ( image_in * h1 )[n]
+    image image_h1;
+    image_h1.rows = height;
+    image_h1.cols = width;
+    image_h1.num_components = planes;
+    image_h1.border = border;   // We keep the border in this image
+    image_h1.stride = stride;   // 
+    
+    image_h1.handle = malloc(
+        (height+2*border) * stride * planes * sizeof(pixel_t));
+    image_h1.buf = image_h1.handle + (stride*border + border) * planes;
+
+    // Initialize output image
+    image_out->rows = height;
+    image_out->cols = width;
+    image_out->num_components = planes;
+    image_out->border = 0;
+    image_out->stride = width;
+
+    pixel_t *out_buf = malloc(height * width * planes * sizeof(pixel_t));
+    image_out->handle = out_buf;
+    image_out->buf = out_buf;
+
+    // Perform convolution with h1
+    // TODO: Keep border from image_in for next convolution?
+    for (int row = 0; row < height; row++) {
+        for (int col = 0; col < width; col ++) {
+            // Pixel coordinate on input and output images
+            pixel_t *in_p = image_in->buf + (row*stride + col)*planes;
+            pixel_t *out_p = image_h1.buf + (row*stride + col)*planes;
+
+            // Optimization: Moving average inner products
+            //
+            // Step 1: Take inner product for pixel c
+            // +---------+
+            // |a b c d e|f g
+            // +---------+
+            //
+            // The inner product for step 1 requires summing the product of 
+            // pixels a to e with a PSF value five times.
+            //
+            // sum1 = a*PSF[-2] + b*PSF[-1] + c*PSF[0] + d*PSF[1] + e*PSF[2]
+            //
+            // Step 2: Take inner product for pixel d
+            //   +---------+
+            //  a|b c d e f|g
+            //   +---------+
+            //
+            // For a moving average filter, the PSF values are all the same. 
+            // Therefore, we can reuse part of the calculation from step 1.
+            //
+            // sum2 = sum1 - a*PSF + f*PSF
+            //
+
+            // Inner product of image with mirrored moving average PSF
+            // `h_mirror[n1, n2] = h[-n1, -n2]`
+            // horizontal
+            pixel_t sum[3] = {0,0,0};
+            pixel_t prev_sum[3] = {0,0,0};
+
+            if (col == 0) {
+                // For first pixel, sum all pixel values
+                for (int n = -EXTENT1; n < EXTENT1+1; n++) {
+                    int index_in = (n) * planes;
+                    if (planes == 3) {
+                        sum[0] += in_p[index_in] * h;
+                        sum[1] += in_p[index_in+1] * h;
+                        sum[2] += in_p[index_in+2] * h;
+                    } else {
+                        sum[0] += in_p[index_in] * h;
+                    }
+                }
+            } else {
+                // For rest of row, use optimization
+                int n_sub = (-EXTENT1 - 1) * planes;
+                int n_add = EXTENT1 * planes;
+                if (planes == 3) {
+                    sum[0] = prev_sum[0] + h * (in_p[n_add] - in_p[n_sub]);
+                    sum[1] = prev_sum[1] + h * (in_p[n_add+1] - in_p[n_sub+1]);
+                    sum[2] = prev_sum[2] + h * (in_p[n_add+2] - in_p[n_sub+2]);
+                } else {
+                    sum[0] = prev_sum[0] + h * (in_p[n_add] - in_p[n_sub]);
+                }
+            }
+
+            // Store result of inner product
+            if (planes == 3) {
+                out_p[0] = prev_sum[0] = sum[0];
+                out_p[1] = prev_sum[1] = sum[1];
+                out_p[2] = prev_sum[2] = sum[2];
+            } else {
+                *out_p = prev_sum[0] = sum[0];
+            }
+
+        }
+    }
+
+    // Hack: Just extend border again, rather than reusing border from image_in
+    perform_boundary_extension(&image_h1);
+
+    // Perform convolution with h2
+    for (int row = 0; row < height; row++) {
+        for (int col = 0; col < width; col ++) {
+            // Pixel coordinate on input and output images
+            pixel_t *in_p = image_h1.buf + (row*stride + col)*planes;
+            pixel_t *out_p = image_out->buf + (row*width + col)*planes;
+
+            // Inner product of image with mirrored moving average PSF
+            // `h_mirror[n1, n2] = h[-n1, -n2]`
+            // vertical
+            pixel_t sum[3] = {0,0,0};
+            pixel_t prev_sum[3] = {0,0,0};
+
+            if (col == 0) {
+                // For first pixel, sum all pixel values
+                for (int n = -EXTENT2; n < EXTENT2+1; n++) {
+                    int index_in = (n*stride) * planes;
+                    if (planes == 3) {
+                        sum[0] += in_p[index_in] * h;
+                        sum[1] += in_p[index_in+1] * h;
+                        sum[2] += in_p[index_in+2] * h;
+                    } else {
+                        sum[0] += in_p[index_in] * h;
+                    }
+                }
+            } else {
+                // For rest of row, use optimization
+                int n_sub = (-EXTENT2 - 1) * planes;
+                int n_add = EXTENT2 * planes;
+                if (planes == 3) {
+                    sum[0] = prev_sum[0] + h * (in_p[n_add] - in_p[n_sub]);
+                    sum[1] = prev_sum[1] + h * (in_p[n_add+1] - in_p[n_sub+1]);
+                    sum[2] = prev_sum[2] + h * (in_p[n_add+2] - in_p[n_sub+2]);
+                } else {
+                    sum[0] = prev_sum[0] + h * (in_p[n_add] - in_p[n_sub]);
+                }
+            }
+
+            // Store result of inner product
+            if (planes == 3) {
+                out_p[0] = prev_sum[0] = sum[0];
+                out_p[1] = prev_sum[1] = sum[1];
+                out_p[2] = prev_sum[2] = sum[2];
+            } else {
+                *out_p = prev_sum[0] = sum[0];
+            }
+        }
+    }
+}
+
+
+
+
+
 // // For project 1 task3b
 // // Takes a color plane from each of the input images, and splices them all 
 // // together in image_out.

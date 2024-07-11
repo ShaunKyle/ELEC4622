@@ -237,6 +237,9 @@ int main(int argc, char *argv[]) {
         read_image_from_bmp(&imageIn, &input_bmp, H);
         perform_boundary_extension(&imageIn);
         apply_separable_filters(&imageIn, &imageLowPass, h1, h2, H, H);
+
+        // Task 1 bonus
+        // apply_optimized_moving_average_filter(&imageIn, &imageLowPass, H, H);
         
     }
     else {
