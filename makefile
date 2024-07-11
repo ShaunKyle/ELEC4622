@@ -38,7 +38,7 @@
 # https://nullprogram.com/blog/2017/08/20/
 
 # Ensure that phony targets are not interpreted as file or directory names
-.PHONY: all, clean, test, check, lab1, lab2, filter, project1
+.PHONY: all, clean, test, check, lab1, lab2, filter, project1, project2, project3
 
 # DEBUG=1 -> Debug mode (no optimization, produce debug info)
 # DEBUG=0 -> Release mode (full optimization, strip debug info)
@@ -101,11 +101,15 @@ LAB1:=$(BUILDDIR)/lab1/lab1.exe
 LAB2:=$(BUILDDIR)/lab2/lab2.exe
 FILTEREXAMPLE:=$(BUILDDIR)/filtering_example/filter.exe
 PROJECT1:=$(BUILDDIR)/project1/project1.exe
+PROJECT2:=$(BUILDDIR)/project2/project2.exe
+PROJECT3:=$(BUILDDIR)/project3/project3.exe
 else
 LAB1:=$(BUILDDIR)/lab1/lab1
 LAB2:=$(BUILDDIR)/lab2/lab2
 FILTEREXAMPLE:=$(BUILDDIR)/filtering_example/filter
 PROJECT1:=$(BUILDDIR)/project1/project1
+PROJECT2:=$(BUILDDIR)/project2/project2
+PROJECT3:=$(BUILDDIR)/project3/project3
 endif
 
 # C and C++ source and include files
@@ -151,6 +155,24 @@ PROJECT1INC += $(wildcard $(SRCDIR)/project1/*/*.h)
 PROJECT1INC += $(wildcard $(SRCDIR)/project1/*.hpp)
 PROJECT1INC += $(wildcard $(SRCDIR)/project1/*/*.hpp)
 
+PROJECT2SRC += $(wildcard $(SRCDIR)/project2/*.c)
+PROJECT2SRC += $(wildcard $(SRCDIR)/project2/*/*.c)
+PROJECT2SRC += $(wildcard $(SRCDIR)/project2/*.cpp)
+PROJECT2SRC += $(wildcard $(SRCDIR)/project2/*/*.cpp)
+PROJECT2INC += $(wildcard $(SRCDIR)/project2/*.h)
+PROJECT2INC += $(wildcard $(SRCDIR)/project2/*/*.h)
+PROJECT2INC += $(wildcard $(SRCDIR)/project2/*.hpp)
+PROJECT2INC += $(wildcard $(SRCDIR)/project2/*/*.hpp)
+
+PROJECT3SRC += $(wildcard $(SRCDIR)/project3/*.c)
+PROJECT3SRC += $(wildcard $(SRCDIR)/project3/*/*.c)
+PROJECT3SRC += $(wildcard $(SRCDIR)/project3/*.cpp)
+PROJECT3SRC += $(wildcard $(SRCDIR)/project3/*/*.cpp)
+PROJECT3INC += $(wildcard $(SRCDIR)/project3/*.h)
+PROJECT3INC += $(wildcard $(SRCDIR)/project3/*/*.h)
+PROJECT3INC += $(wildcard $(SRCDIR)/project3/*.hpp)
+PROJECT3INC += $(wildcard $(SRCDIR)/project3/*/*.hpp)
+
 # Object files to be built for each source file (both .c and .cpp)
 # - Extract just the filenames without extensions from source filepaths
 # - Add the desired build directory as filepath prefix (addprefix)
@@ -173,12 +195,20 @@ PROJECT1OBJ += 	$(addsuffix .o, \
 				$(addprefix $(BUILDDIR)/project1/, \
 				$(notdir $(basename $(PROJECT1SRC)))))
 
+PROJECT2OBJ += 	$(addsuffix .o, \
+				$(addprefix $(BUILDDIR)/project2/, \
+				$(notdir $(basename $(PROJECT2SRC)))))
+
+PROJECT3OBJ += 	$(addsuffix .o, \
+				$(addprefix $(BUILDDIR)/project3/, \
+				$(notdir $(basename $(PROJECT3SRC)))))
+
 #####################################################################################TODO finish this....
 
 # The prerequisites to phony target "all" are the final executables to be built.
 # Because "all" is the first target in the makefile, running the command `make`
 # in a terminal will be equivalent to `make all`.
-all: lab1 lab2 filter project1
+all: lab1 lab2 filter project1 project2 project3
 
 # Build directory must exist as a prerequisite for every other target.
 # However, we don't want to force every target to update whenever the contents
@@ -193,12 +223,16 @@ ifeq ($(OS),Windows_NT)
 	mkdir $(BUILDDIR)\shaun_bmp
 	mkdir $(BUILDDIR)\filtering_example
 	mkdir $(BUILDDIR)\project1
+	mkdir $(BUILDDIR)\project2
+	mkdir $(BUILDDIR)\project3
 else
 	mkdir $(BUILDDIR)/lab1
 	mkdir $(BUILDDIR)/lab2
 	mkdir $(BUILDDIR)/shaun_bmp
 	mkdir $(BUILDDIR)/filtering_example
 	mkdir $(BUILDDIR)/project1
+	mkdir $(BUILDDIR)/project2
+	mkdir $(BUILDDIR)/project3
 endif
 
 # The build process for each target executable should be roughly the same:
@@ -285,6 +319,42 @@ $(BUILDDIR)/project1/%.o: $(SRCDIR)/project1/%.cpp | $(BUILDDIR)
 	$(CPP) $(CPPFLAGS) -c -o $@ $<
 
 $(BUILDDIR)/project1/%.o: $(SRCDIR)/project1/*/%.cpp | $(BUILDDIR)
+	$(CPP) $(CPPFLAGS) -c -o $@ $<
+
+# Build rules for project2.exe
+project2: $(PROJECT2)
+
+$(PROJECT2): $(PROJECT2OBJ) $(SHAUNBMPOBJ)
+	$(LINK) -o $@ $(PROJECT2OBJ) $(SHAUNBMPOBJ)
+
+$(BUILDDIR)/project2/%.o: $(SRCDIR)/project2/%.c | $(BUILDDIR)
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+$(BUILDDIR)/project2/%.o: $(SRCDIR)/project2/*/%.c | $(BUILDDIR)
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+$(BUILDDIR)/project2/%.o: $(SRCDIR)/project2/%.cpp | $(BUILDDIR)
+	$(CPP) $(CPPFLAGS) -c -o $@ $<
+
+$(BUILDDIR)/project2/%.o: $(SRCDIR)/project2/*/%.cpp | $(BUILDDIR)
+	$(CPP) $(CPPFLAGS) -c -o $@ $<
+
+# Build rules for project3.exe
+project3: $(PROJECT3)
+
+$(PROJECT3): $(PROJECT3OBJ) $(SHAUNBMPOBJ)
+	$(LINK) -o $@ $(PROJECT3OBJ) $(SHAUNBMPOBJ)
+
+$(BUILDDIR)/project3/%.o: $(SRCDIR)/project3/%.c | $(BUILDDIR)
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+$(BUILDDIR)/project3/%.o: $(SRCDIR)/project3/*/%.c | $(BUILDDIR)
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+$(BUILDDIR)/project3/%.o: $(SRCDIR)/project3/%.cpp | $(BUILDDIR)
+	$(CPP) $(CPPFLAGS) -c -o $@ $<
+
+$(BUILDDIR)/project3/%.o: $(SRCDIR)/project3/*/%.cpp | $(BUILDDIR)
 	$(CPP) $(CPPFLAGS) -c -o $@ $<
 
 #####################
