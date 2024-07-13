@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#define _USE_MATH_DEFINES
 #include <math.h>   // fabs, exp, M_PI
 
 #include "../shaun_bmp/bmp_io.h"
@@ -342,7 +343,8 @@ int main(int argc, char *argv[]) {
     image imageGradIn, imageGrad;
 
     const int DIFF_H = 1;
-    const int DIFF_DIM = (2*DIFF_H+1);
+    // const int DIFF_DIM = (2*DIFF_H+1);
+    #define DIFF_DIM    3
 
     pixel_t hD_1[DIFF_DIM] = {0.5, 0.0, -0.5}; // Hey, this has dc gain of 0...
     pixel_t hD_2[DIFF_DIM] = {0.5, 0.0, -0.5};
