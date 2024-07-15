@@ -239,11 +239,14 @@ int main (int argc, char *argv[]) {
     ////////////////////////////////////////
 
     if (!gaussianPyramidFlag) {
-        puts("TODO> Task 2");
+        puts("Task 2> Laplacian Pyramid");
 
         // Design windowed sinc interpolator
         // Confine bandwidth to (-pi/2, pi/2)^2
-        pixel_t g_interp[3];
+        // TODO: Why? And how? By changing stretch factor to 2.0? But aren't we
+        //       upsampling?
+        pixel_t g_interp[2*H+1];
+        design_windowed_sinc_filter(g_interp, H, 1.0);
 
     }
 
@@ -251,6 +254,11 @@ int main (int argc, char *argv[]) {
     ////////////////////////////
     // Output for task 1 or 2 //
     ////////////////////////////
+
+
+    ////////////////////////////////////////////
+    // Task 3 & 4: Reconstruct original image //
+    ////////////////////////////////////////////
     
 
     return EXIT_SUCCESS;
