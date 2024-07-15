@@ -9,7 +9,7 @@
 #include "../shaun_bmp/image.h"
 
 float hanning_window(int n, int extent);
-void design_stretched_sinc_filter(pixel_t *h_sinc, int extent);
+void design_windowed_sinc_filter(pixel_t *h_sinc, int extent, float stretch);
 
 // CLI help message (usage, description, options list)
 const char CLI_HELP[] = "\
@@ -149,7 +149,7 @@ int main (int argc, char *argv[]) {
         // Design windowed stretched sinc
         // Reminder: Use apply_separable_filters_2n() to apply filter
         pixel_t h_sinc[2*H+1];
-        design_stretched_sinc_filter(h_sinc, H);
+        design_windowed_sinc_filter(h_sinc, H, 2.0);
 
         // Allocate memory for Gaussian pyramid, based on height of input image
         image imgGaussianPyramid, image0;
@@ -240,6 +240,11 @@ int main (int argc, char *argv[]) {
 
     if (!gaussianPyramidFlag) {
         puts("TODO> Task 2");
+
+        // Design windowed sinc interpolator
+        // Confine bandwidth to (-pi/2, pi/2)^2
+        pixel_t g_interp[3];
+
     }
 
 
@@ -269,15 +274,16 @@ float hanning_window(int n, int extent) {
     }
 }
 
-void design_stretched_sinc_filter(pixel_t *h_sinc, int extent) {
-    // Design windowed stretched sinc
+
+void design_windowed_sinc_filter(pixel_t *h_sinc, int extent, float stretch) {
+    // Design windowed sinc
     const int SINC_DIM = (2*extent+1);
     for (int tap = 0; tap < SINC_DIM; tap++) {
         const int n = tap - extent;
         if (n == 0) {
             h_sinc[tap] = 1;
         } else {
-            h_sinc[tap] = sin(M_PI * n / 2.0) / (M_PI * n/2.0);
+            h_sinc[tap] = sin(M_PI * n / stretch) / (M_PI * n / stretch);
         }
         h_sinc[tap] *= hanning_window(n, extent);
         printf("h_sinc[%d] = %f\n", n, h_sinc[tap]);
