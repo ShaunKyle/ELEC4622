@@ -9,6 +9,7 @@
 #include "../shaun_bmp/image.h"
 
 float hanning_window(int n, int extent);
+void design_stretched_sinc_filter(pixel_t *h_sinc, int extent);
 
 // CLI help message (usage, description, options list)
 const char CLI_HELP[] = "\
@@ -143,49 +144,92 @@ int main (int argc, char *argv[]) {
     ///////////////////////////////////////
 
     if (gaussianPyramidFlag) {
-        puts("TODO> Task 1");
-
-        image image0, image1;
-        read_image_from_bmp(&image0, &input_bmp, H);
-        perform_boundary_extension(&image0);
-
-        // Low pass filter and decimate image using stretched sinc
-
+        puts("Task 1> Gaussian Pyramid");        
 
         // Design windowed stretched sinc
-        #define SINC_DIM    (2*H+1)
-        pixel_t h_sinc[SINC_DIM];
-        for (int tap = 0; tap < SINC_DIM; tap++) {
-            const int n = tap - H;
-            if (n == 0) {
-                h_sinc[tap] = 1;
-            } else {
-                h_sinc[tap] = sin(M_PI * n / 2.0) / (M_PI * n/2.0);
+        // Reminder: Use apply_separable_filters_2n() to apply filter
+        pixel_t h_sinc[2*H+1];
+        design_stretched_sinc_filter(h_sinc, H);
+
+        // Allocate memory for Gaussian pyramid, based on height of input image
+        image imgGaussianPyramid, image0;
+        read_image_from_bmp(&image0, &input_bmp, H);
+        perform_boundary_extension(&image0);
+        int total_height = 0;
+        for (int level = 0; level <= D; level++) {
+            total_height += (image0.rows / pow(2, level));
+        }
+        printf("Total height of pyramid: %d\n", total_height);
+        imgGaussianPyramid.rows = total_height;
+        imgGaussianPyramid.cols = image0.cols;
+        imgGaussianPyramid.border = 0;
+        imgGaussianPyramid.stride = image0.cols;
+        imgGaussianPyramid.num_components = image0.num_components;
+        imgGaussianPyramid.handle = malloc(
+            total_height * imgGaussianPyramid.cols * 
+            imgGaussianPyramid.num_components * sizeof(pixel_t)
+        );
+        imgGaussianPyramid.buf = imgGaussianPyramid.handle;
+
+        // Initialize pyramid pixels to 0
+        for (int row = 0; row < imgGaussianPyramid.rows; row++) {
+            for (int col = 0; col < imgGaussianPyramid.cols; col++) {
+                const int index = 
+                    (row * imgGaussianPyramid.stride + col) 
+                    * imgGaussianPyramid.num_components;
+                for (int plane = 0; plane < imgGaussianPyramid.num_components; plane++) {
+                    imgGaussianPyramid.buf[index+plane] = 0.0;
+                }
             }
-            h_sinc[tap] *= hanning_window(n, H);
-            printf("h_sinc[%d] = %f\n", n, h_sinc[tap]);
         }
 
-        // Check DC gain of windowed sinc
-        double dc_gain = 0;
-        for (int row = 0; row < SINC_DIM; row++) {
-            for (int col = 0; col < SINC_DIM; col++) {
-                // const int n1 = row - H;
-                // const int n2 = col - H;
-                dc_gain += (h_sinc[row] * h_sinc[col]);
+        // Create sub-images in pyramid
+        int accessed_rows = 0;
+        image imagePrev, imageCurrent;
+        imageCurrent = image0;
+        for (int level = 0; level <= D; level++) {
+            printf("Level %d\n", level);
+            printf("Starting row: %d\n", accessed_rows);
+
+            // Write sub-image to pyramid
+            for (int row = 0; row < imageCurrent.rows; row++) {
+                for (int col = 0; col < imageCurrent.cols; col++) {
+                    // Pixel to read from imageCurrent
+                    const int row_flipped = imageCurrent.rows - row - 1;
+                    const int indexCurrent = 
+                        (row_flipped * imageCurrent.stride + col) 
+                        * imageCurrent.num_components;
+                    
+                    // Calculate pyramid coordinates and array index
+                    // Flip n2 because of BMP coordinate system
+                    const int n1 = col;
+                    const int n2 = total_height - accessed_rows - 1;
+                    const int indexPyramid = 
+                        (n2 * imgGaussianPyramid.stride + n1) 
+                        * imgGaussianPyramid.num_components;
+                    
+                    // Write pixel from imageCurrent to pyramid
+                    for (int plane = 0; plane < imageCurrent.num_components; plane++) {
+                        imgGaussianPyramid.buf[indexPyramid+plane] = 
+                            imageCurrent.buf[indexCurrent+plane];
+                    }
+                }
+
+                // Ready to write next row
+                // printf("%d\n", accessed_rows);
+                accessed_rows++;
             }
+
+            // Apply decimation filter to image (i.e. every second pixel)
+            copy_image(&imageCurrent, &imagePrev, H);
+            perform_boundary_extension(&imagePrev);
+            apply_separable_filters_2n(&imagePrev, &imageCurrent, 
+                h_sinc, h_sinc, H, H
+            );
         }
-        printf("DC gain: %f\n", dc_gain);
 
-        // Normalize dc_gain to 1
-        for (int tap = 0; tap < SINC_DIM; tap++) {
-            h_sinc[tap] /= dc_gain;
-        }
-
-        // Apply filter, but to every second pixel.
-        apply_separable_filters_2n(&image0, &image1, h_sinc, h_sinc, H, H);
-        export_image_as_bmp(&image1, outputFile);
-
+        // Output
+        export_image_as_bmp(&imgGaussianPyramid, outputFile);
         
     }
 
@@ -223,4 +267,43 @@ float hanning_window(int n, int extent) {
         // puts("wall");
         return 0.0;
     }
+}
+
+void design_stretched_sinc_filter(pixel_t *h_sinc, int extent) {
+    // Design windowed stretched sinc
+    const int SINC_DIM = (2*extent+1);
+    for (int tap = 0; tap < SINC_DIM; tap++) {
+        const int n = tap - extent;
+        if (n == 0) {
+            h_sinc[tap] = 1;
+        } else {
+            h_sinc[tap] = sin(M_PI * n / 2.0) / (M_PI * n/2.0);
+        }
+        h_sinc[tap] *= hanning_window(n, extent);
+        printf("h_sinc[%d] = %f\n", n, h_sinc[tap]);
+    }
+
+    // Check DC gain of windowed sinc
+    double dc_gain = 0;
+    for (int row = 0; row < SINC_DIM; row++) {
+        for (int col = 0; col < SINC_DIM; col++) {
+            dc_gain += (h_sinc[row] * h_sinc[col]);
+        }
+    }
+    printf("DC gain: %f\n", dc_gain);
+
+    // Normalize dc_gain to 1
+    // Note that this design is for separable filters. Sqrt.
+    for (int tap = 0; tap < SINC_DIM; tap++) {
+        h_sinc[tap] /= sqrt(dc_gain);
+    }
+
+    // Check normalized DC gain of windowed sinc
+    double dc_gain_normalized = 0;
+    for (int row = 0; row < SINC_DIM; row++) {
+        for (int col = 0; col < SINC_DIM; col++) {
+            dc_gain_normalized += (h_sinc[row] * h_sinc[col]);
+        }
+    }
+    printf("DC gain normalized: %f\n", dc_gain_normalized);
 }

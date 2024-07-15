@@ -710,10 +710,12 @@ pixel_t *h1_values, pixel_t *h2_values, int extent1, int extent2) {
     image_out->rows = height / 2;   // Decimate in vertical direction
     image_out->cols = width / 2;
     image_out->num_components = planes;
-    image_out->border = 0;
-    image_out->stride = image_out->cols;
+    image_out->border = border;     // Keep border for project 2 pyramids
+    image_out->stride = image_out->cols + 2*border;
 
-    pixel_t *out_buf = malloc(height/2 * width/2 * planes * sizeof(pixel_t));
+    pixel_t *out_buf = malloc(
+        (image_out->rows+2*border) * image_out->stride * planes 
+        * sizeof(pixel_t));
     image_out->handle = out_buf;
     image_out->buf = out_buf;
 
