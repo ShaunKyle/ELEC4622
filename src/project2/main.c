@@ -2,8 +2,13 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
+#define _USE_MATH_DEFINES
+#include <math.h> 
 
 #include "../shaun_bmp/bmp_io.h"
+#include "../shaun_bmp/image.h"
+
+float hanning_window(int n, int extent);
 
 // CLI help message (usage, description, options list)
 const char CLI_HELP[] = "\
@@ -139,6 +144,49 @@ int main (int argc, char *argv[]) {
 
     if (gaussianPyramidFlag) {
         puts("TODO> Task 1");
+
+        image image0, image1;
+        read_image_from_bmp(&image0, &input_bmp, H);
+        perform_boundary_extension(&image0);
+
+        // Low pass filter and decimate image using stretched sinc
+
+
+        // Design windowed stretched sinc
+        #define SINC_DIM    (2*H+1)
+        pixel_t h_sinc[SINC_DIM];
+        for (int tap = 0; tap < SINC_DIM; tap++) {
+            const int n = tap - H;
+            if (n == 0) {
+                h_sinc[tap] = 1;
+            } else {
+                h_sinc[tap] = sin(M_PI * n / 2.0) / (M_PI * n/2.0);
+            }
+            h_sinc[tap] *= hanning_window(n, H);
+            printf("h_sinc[%d] = %f\n", n, h_sinc[tap]);
+        }
+
+        // Check DC gain of windowed sinc
+        double dc_gain = 0;
+        for (int row = 0; row < SINC_DIM; row++) {
+            for (int col = 0; col < SINC_DIM; col++) {
+                // const int n1 = row - H;
+                // const int n2 = col - H;
+                dc_gain += (h_sinc[row] * h_sinc[col]);
+            }
+        }
+        printf("DC gain: %f\n", dc_gain);
+
+        // Normalize dc_gain to 1
+        for (int tap = 0; tap < SINC_DIM; tap++) {
+            h_sinc[tap] /= dc_gain;
+        }
+
+        // Apply filter, but to every second pixel.
+        apply_separable_filters_2n(&image0, &image1, h_sinc, h_sinc, H, H);
+        export_image_as_bmp(&image1, outputFile);
+
+        
     }
 
 
@@ -157,4 +205,22 @@ int main (int argc, char *argv[]) {
     
 
     return EXIT_SUCCESS;
+}
+
+
+float hanning_window(int n, int extent) {
+    // If extent is 0, we don't need a window.
+    if (extent == 0) {
+        return 1.0;
+    }
+
+    // Hanning window
+    if (abs(n) < extent) {
+        // printf("%f\n", cos(M_PI * n / extent));
+        return (1 + cos(M_PI * n / extent)) / 2.0;
+    }
+    else {
+        // puts("wall");
+        return 0.0;
+    }
 }

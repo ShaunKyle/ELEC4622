@@ -68,4 +68,9 @@ void hacky_combine_planes_into_RGB(image *image_out,
 image *image_R, image *image_G, image *image_B);
 void extract_component(image *image_out, image *image_BGR, int component);
 
+
+// Project 2
+void apply_separable_filters_2n(image *image_in, image *image_out, 
+pixel_t *h1_values, pixel_t *h2_values, int extent1, int extent2);
+
 #endif // SHAUN_BMP_IMAGE_H
