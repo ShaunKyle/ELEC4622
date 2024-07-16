@@ -151,6 +151,75 @@ int main (int argc, char *argv[]) {
     printf("Alignment padding bytes: %d\n\n", input2_bmp.alignment_bytes);
 
 
+    ///////////////////////////////////////
+    // Task 5: Stitching in image domain //
+    ///////////////////////////////////////
+
+    // Stitching border will be located at middle of image.
+    // Assuming both images have the same dimensions.
+
+    if (!laplacianDomainFlag) {
+        image image1, image2;
+        read_image_from_bmp(&image1, &input1_bmp, 0);
+        read_image_from_bmp(&image2, &input2_bmp, 0);
+
+        // Allocate memory for stitched image
+        image stitched;
+        const int planes = image1.num_components;
+        stitched.rows = image1.rows;
+        stitched.cols = image1.cols * 3 / 2;
+        stitched.border = 0;
+        stitched.stride = stitched.cols + 2*stitched.border;
+        stitched.num_components = image1.num_components;
+        stitched.handle = malloc(
+            stitched.rows * stitched.cols * stitched.num_components
+        );
+        stitched.buf = stitched.handle;
+
+        // Place image 1 on left
+        for (int r = 0; r < image1.rows; r++) {
+            // Image 1 on left
+            for (int c = 0; c < (image1.cols/2); c++) {
+                const int index1 = (r*image1.stride + c) * planes;
+                const int indexS = (r*stitched.stride + c) * planes;
+
+                for (int p = 0; p < planes; p++) {
+                    stitched.buf[indexS+p] = image1.buf[index1+p];
+                }
+            }
+
+            // Image 1 and 2 stitching
+            for (int c = 0; c < (image1.cols/2); c++) {
+                const int c1 = c + image1.cols/2;
+                const int index1 = (r*image1.stride + c1) * planes;
+                const int index2 = (r*image2.stride + c) * planes;
+                const int sc = c + image1.cols/2;
+                const int indexS = (r*stitched.stride + sc) * planes;
+
+                for (int p = 0; p < planes; p++) {
+                    stitched.buf[indexS+p] = (image1.buf[index1+p] + image2.buf[index2+p]) / 2;
+                }
+                
+            }
+
+            // Image 2 on right
+            for (int c = 0; c < (image1.cols/2); c++) {
+                const int c2 = c + image1.cols/2;
+                const int index2 = (r*image2.stride + c2) * planes;
+                const int sc = c + image1.cols;
+                const int indexS = (r*stitched.stride + sc) * planes;
+
+                for (int p = 0; p < planes; p++) {
+                    stitched.buf[indexS+p] = image2.buf[index2+p];
+                }
+            }
+        }
+
+        // Output
+        export_image_as_bmp(&stitched, outputFile);
+
+        return EXIT_SUCCESS;
+    }
     
     
     /*
