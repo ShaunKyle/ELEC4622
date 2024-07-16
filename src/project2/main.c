@@ -469,6 +469,16 @@ int main (int argc, char *argv[]) {
             return EXIT_FAILURE;
         }
 
+        // Design windowed sinc interpolator
+        // Confine bandwidth to (-pi/2, pi/2)^2
+        // Because this filter is designed to interpolate from a downsampled 
+        // image, we don't need to stretch the sinc.
+        // Because the sample density is increasing.
+        // See Ch 3 Pg 15 Sample density increase.
+        puts("Separable interpolator g[n]");
+        pixel_t g_interp[2*H+1];
+        design_windowed_sinc_filter(g_interp, H, 1.0);
+
         // Info about original image
         printf("Original image height: %d\n\n", original_height);
 
@@ -545,16 +555,87 @@ int main (int argc, char *argv[]) {
                     }
                 }
             }
+            // Note: Laplacian pyramid was level shifted by 1/2 magnitude
+            perform_level_shift(&imageY, -0.5);
 
             // // Debug: Check if y_d obtained correctly
             // char str[20];
             // sprintf(str, "out_lvl%d.bmp", level);
             // export_image_as_bmp(&imageY, str);
 
+
             // Step 2: Form original image x_d
             //
             // x_d = y_d + sum_k( x_{d+1}[k] g[n-2k] )
-            
+
+            if (level == D) {
+                // For first iteration, x_D = y_D
+                copy_image(&imageY, &imageX, 0);
+            }
+            else {
+                // Obtain x_{d+1}
+                copy_image(&imageX, &imageXLowRes, 0);
+
+                // Intialize x_d = y_d
+                copy_image(&imageY, &imageX, 0);
+
+                // For each location k in x_{d+1}, modify x_d[2k]
+                // k = [col, row]
+                for (int row = 0; row < imageXLowRes.rows; row++) {
+                    for (int col = 0; col < imageXLowRes.cols; col++) {
+                        // Pixel index for x_{d+1}[k]
+                        // This acts as an "excitation source" for g_interp
+                        const int planes = imageXLowRes.num_components;
+                        const int index = 
+                            (row * imageXLowRes.stride + col) * planes;
+                        
+                        // Pixel index for x_d[2k]
+                        // This image is scaled up by a factor of 2
+                        const int indexX = 2*(row * imageX.stride + col) * planes;
+
+                        // Direct implementation
+                        // y_d[2k] = x_d[2k] - x_{d+1}[k] * sinc * sinc
+                        for (int plane = 0; plane < planes; plane++) {
+                            // Obtain direct 2D PSF values
+                            // Also "excite" the values of g_direct by x_{d+1}[k]
+                            const int DIM = 2*H+1;
+                            pixel_t g_direct[DIM*DIM];
+                            for (int r = 0; r < DIM; r++) {
+                                for (int c = 0; c < DIM; c++) {
+                                    g_direct[r*DIM + c] = g_interp[r] * g_interp[c] 
+                                        * imageXLowRes.buf[index+plane];
+                                }
+                            }
+
+                            // Apply excited PSF to output image
+                            pixel_t *x_p = imageX.buf + (indexX+plane);
+                            for (int r = 0; r < DIM; r++) {
+                                for (int c = 0; c < DIM; c++) {
+                                    const int n1 = c - H;
+                                    const int n2 = r - H;
+                                    const int stride = imageX.stride;
+
+                                    x_p[(n2*stride + n1) * planes] -= 
+                                        g_direct[r*DIM + c];
+                                }
+                            }
+
+                            // Hack: x_d[2k+1] = x_{d+1}[k]
+                            // This seems wrong, but whatever.
+                            const int plusOneRow = 1 * planes;
+                            const int plusOneCol = 1*imageX.stride*planes;
+                            x_p[plusOneRow] -= imageXLowRes.buf[index+plane];
+                            x_p[plusOneCol] -= imageXLowRes.buf[index+plane];
+                            x_p[plusOneRow+plusOneCol] -= imageXLowRes.buf[index+plane];
+                        }
+                    }
+                }
+            }
+
+            // Debug: Check if x_d obtained correctly
+            char str[20];
+            sprintf(str, "out_x_%d.bmp", level);
+            export_image_as_bmp(&imageX, str);
 
             // Ready for next row
             accessed_rows += height;
@@ -564,7 +645,7 @@ int main (int argc, char *argv[]) {
         }
 
         // Step 3: Export reconstructed image, after iterating to level 0
-        
+        export_image_as_bmp(&imageX, "out_reconstruct.bmp");
     }
     
 
