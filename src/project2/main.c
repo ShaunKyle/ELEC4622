@@ -485,7 +485,85 @@ int main (int argc, char *argv[]) {
         printf("Line bytes: %d\n", pyramid_bmp.line_bytes);
         printf("Alignment padding bytes: %d\n\n", pyramid_bmp.alignment_bytes);
 
+        image imgPyramid;
+        read_image_from_bmp(&imgPyramid, &pyramid_bmp, 0);
+
         // Inverting the Laplacian Transform
+        //
+        // The figure below shows a segment of a Laplacian pyramid.
+        //
+        // | etc.      |
+        // +-----+-----+
+        // |     |
+        // |     | y_{d}
+        // |     |
+        // +--+--+
+        // |  | y_{d+1}
+        // +--+
+        //
+        // To reconstruct x_d (original image x, level d of pyramid), we use a 
+        // similar formula to the Laplacian pyramid.
+        //
+        // x_d = y_d + sum_k( x_{d+1}[k] g[n-2k] )
+        //
+        // Start with x_D = y_D, and keep iterating this until x_0 is reached.
+
+        image imageX, imageXLowRes, imageY;
+        int accessed_rows = 0;
+        for (int level = D; level >= 0; level--) {
+            printf("Level %d\n", level);
+            // printf("Starting row: %d\n", accessed_rows);
+
+            // Step 1: Obtain y_d from Laplacian pyramid
+            const int height = original_height / pow(2, level);
+            const int pyramid_row_end = (imgPyramid.rows - accessed_rows);
+            const int pyramid_row_start = (pyramid_row_end - height);
+            printf("Height of x_%d: %d\n", level, height);
+            printf("Starting row: %d\n", pyramid_row_start);
+            printf("Final row: %d\n", pyramid_row_end);
+            imageY.rows = height;
+            imageY.cols = imgPyramid.cols;
+            imageY.border = 0;
+            imageY.stride = imageY.cols;
+            imageY.num_components = imgPyramid.num_components;
+            imageY.handle = malloc(
+                imageY.rows * imageY.cols * 
+                imageY.num_components * sizeof(pixel_t)
+            );
+            imageY.buf = imageY.handle;
+            for (int row = 0; row < imageY.rows; row++) {
+                for (int col = 0; col < imageY.cols; col++) {
+                    const int planes = imageY.num_components;
+                    const int index = (row * imageY.stride + col) * planes;
+                    // Note: BMP vertical coordinate n2 is flipped
+                    const int pyramid_row_end_flipped = imgPyramid.rows - pyramid_row_end;
+                    const int indexPyramid = ((row+pyramid_row_end_flipped) * 
+                        imgPyramid.stride + col) * planes;
+                    for (int plane = 0; plane < planes; plane++) {
+                        imageY.buf[index+plane] = 
+                            imgPyramid.buf[indexPyramid+plane];
+                    }
+                }
+            }
+
+            // // Debug: Check if y_d obtained correctly
+            // char str[20];
+            // sprintf(str, "out_lvl%d.bmp", level);
+            // export_image_as_bmp(&imageY, str);
+
+            // Step 2: Form original image x_d
+            //
+            // x_d = y_d + sum_k( x_{d+1}[k] g[n-2k] )
+            
+
+            // Ready for next row
+            accessed_rows += height;
+            free(imageY.handle);
+            imageY.handle = NULL;
+            imageY.buf = NULL;
+        }
+
+        // Step 3: Export reconstructed image, after iterating to level 0
         
     }
     
