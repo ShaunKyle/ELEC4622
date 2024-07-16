@@ -10,6 +10,7 @@
 
 float hanning_window(int n, int extent);
 void design_windowed_sinc_filter(pixel_t *h_sinc, int extent, float stretch);
+void create_laplacian_subimages(image *image_in, image *subimages, int D, int H);
 
 // CLI help message (usage, description, options list)
 const char CLI_HELP[] = "\
@@ -222,224 +223,44 @@ int main (int argc, char *argv[]) {
     }
     
     
-    /*
-    ////////////////////////////////////////
-    // Task 2: Create a Laplacian Pyramid //
-    ////////////////////////////////////////
+    
+    ///////////////////////////////////////////////////////
+    // Task 2: Create Laplacian Pyramids of input images //
+    ///////////////////////////////////////////////////////
+
+    // This is a prerequisite step for Task 6.
 
     // Modification for Task 4: 
     // Save Laplacian detail images for reconstruction
-    image laplacianLevels[D+1];
+    image image1, image2;
+    read_image_from_bmp(&image1, &input1_bmp, 0);
+    read_image_from_bmp(&image2, &input2_bmp, 0);
 
-    puts("Part 1> Laplacian Pyramid");
+    image laplacian1Levels[D+1];
+    image laplacian2Levels[D+1];
+    create_laplacian_subimages(&image1, laplacian1Levels, D, H);
+    create_laplacian_subimages(&image2, laplacian2Levels, D, H);
 
-    // Design windowed sinc interpolator
-    // Confine bandwidth to (-pi/2, pi/2)^2
-    // Because this filter is designed to interpolate from a downsampled 
-    // image, we don't need to stretch the sinc.
-    // Because the sample density is increasing.
-    // See Ch 3 Pg 15 Sample density increase.
-    puts("Separable interpolator g[n]");
-    pixel_t g_interp[2*H+1];
-    design_windowed_sinc_filter(g_interp, H, 1.0);
-
-    // Design windowed stretched sinc
-    // Reminder: Use apply_separable_filters_2n() to apply filter
-    puts("Separable stretched sinc h[n]");
-    pixel_t h_sinc[2*H+1];
-    design_windowed_sinc_filter(h_sinc, H, 2.0);
-
-    // Allocate memory for Laplacian pyramid, based on input image height
-    image imgLaplacianPyramid, image0;
-    read_image_from_bmp(&image0, &input_bmp, H);
-    perform_boundary_extension(&image0);
-    int total_height = 0;
-    for (int level = 0; level <= D; level++) {
-        total_height += (image0.rows / pow(2, level));
-    }
-    printf("Total height of pyramid: %d\n", total_height);
-    imgLaplacianPyramid.rows = total_height;
-    imgLaplacianPyramid.cols = image0.cols;
-    imgLaplacianPyramid.border = 0;
-    imgLaplacianPyramid.stride = image0.cols;
-    imgLaplacianPyramid.num_components = image0.num_components;
-    imgLaplacianPyramid.handle = malloc(
-        total_height * imgLaplacianPyramid.cols * 
-        imgLaplacianPyramid.num_components * sizeof(pixel_t)
-    );
-    imgLaplacianPyramid.buf = imgLaplacianPyramid.handle;
-
-    // Initialize pyramid pixels to 0
-    for (int row = 0; row < imgLaplacianPyramid.rows; row++) {
-        for (int col = 0; col < imgLaplacianPyramid.cols; col++) {
-            const int index = 
-                (row * imgLaplacianPyramid.stride + col) 
-                * imgLaplacianPyramid.num_components;
-            for (int plane = 0; plane < imgLaplacianPyramid.num_components; plane++) {
-                imgLaplacianPyramid.buf[index+plane] = 0.0;
-            }
-        }
-    }
-
-    // Create sub-images in pyramid
-    int accessed_rows = 0;
-    image imageX, imageXLowRes, imageY;
-    imageX = image0;
-    for (int level = 0; level <= D; level++) {
-        printf("Level %d\n", level);
-        printf("Starting row: %d\n", accessed_rows);
-
-        // TODO:
-        // 1. Obtain x_d and x_{d+1}, where d is the current level
-        // 2. Form the Laplacian detail image
-        // 3. Write the Laplacian detail image to pyramid
-
-        // Step 1: Obtain x_d and x_{d+1}
-        //
-        // Apply decimation filter to image x_d (every second pixel)
-        // copy_image(&imageCurrent, &imagePrev, H);
-        perform_boundary_extension(&imageX);
-        apply_separable_filters_2n(&imageX, &imageXLowRes, 
-            h_sinc, h_sinc, H, H
-        );
-
-        // Step 2: Form Laplacian detail image
-        //
-        // y_d[n] = x_d[n] - sum( x_{d+1}[k] g[n-2k] )
-        //
-        // Using input-based implementation.
-        // This means that for every pixel in x_{d+1}, we add something to
-        // x_d.
-
-        // Set y_d[n] = x_d[n]
-        copy_image(&imageX, &imageY, H);
-
-        // TODO: finish.
-        // For each location k in x_{d+1}, modify y_d[2k]
-        // k = [col, row]
-        for (int row = 0; row < imageXLowRes.rows; row++) {
-            for (int col = 0; col < imageXLowRes.cols; col++) {
-                // Pixel index for x_{d+1}[k]
-                // This acts as an "excitation source" for g_interp
-                const int planes = imageXLowRes.num_components;
-                const int index = 
-                    (row * imageXLowRes.stride + col) * planes;
-                
-                // Pixel index for y_d[2k]
-                // This image is scaled up by a factor of 2
-                const int indexY = 2*(row * imageY.stride + col) * planes;
-
-                // Estimate x_d[2k] from x_{d+1}[k]
-                // Note that this is a sequence, not a single value?
-
-                // Direct implementation
-                // y_d[2k] = x_d[2k] - x_{d+1}[k] * sinc * sinc
-                for (int plane = 0; plane < planes; plane++) {
-                    // Obtain direct 2D PSF values
-                    // Also "excite" the values of g_direct by x_{d+1}[k]
-                    const int DIM = 2*H+1;
-                    pixel_t g_direct[DIM*DIM];
-                    for (int r = 0; r < DIM; r++) {
-                        for (int c = 0; c < DIM; c++) {
-                            g_direct[r*DIM + c] = g_interp[r] * g_interp[c] 
-                                * imageXLowRes.buf[index+plane];
-                        }
-                    }
-
-                    // Apply excited PSF to output image
-                    pixel_t *y_p = imageY.buf + (indexY+plane);
-                    for (int r = 0; r < DIM; r++) {
-                        for (int c = 0; c < DIM; c++) {
-                            const int n1 = c - H;
-                            const int n2 = r - H;
-                            const int stride = imageY.stride;
-
-                            y_p[(n2*stride + n1) * planes] -= 
-                                g_direct[r*DIM + c];
-                        }
-                    }
-
-                    // Hack: x_d[2k+1] = x_{d+1}[k]
-                    // This seems wrong, but whatever.
-                    const int plusOneRow = 1 * planes;
-                    const int plusOneCol = 1*imageY.stride*planes;
-                    y_p[plusOneRow] -= imageXLowRes.buf[index+plane];
-                    y_p[plusOneCol] -= imageXLowRes.buf[index+plane];
-                    y_p[plusOneRow+plusOneCol] -= imageXLowRes.buf[index+plane];
-                }
+    
+    // // Debug only.
+    // // Output, level shift by half max magnitude to illustrate +/- values
+    // for (int level = 0; level<D; level++) {
+    //     perform_level_shift(&laplacian2Levels[level], 0.5);
+    //     char str[20];
+    //     sprintf(str, "out_x1_%d.bmp", level);
+    //     export_image_as_bmp(&laplacian2Levels[level], str);
+    // }
+    
 
 
-                // // TODO: planes
-                // // TODO: apply in 2 axes
-                // for (int plane = 0; plane < planes; plane++) {
-                //     // "Excite" the values of g_interp by x_{d+1}[k]
-                //     const int DIM = 2*H+1;
-                //     pixel_t g_excite[DIM];
-                //     for (int i = 0; i < DIM; i++) {
-                //         g_excite[i] = 
-                //             imageXLowRes.buf[index+plane] * g_interp[i];
-                //     }
+    ///////////////////////////////////////////////
+    // Task 6: Stitch images in Laplacian domain //
+    ///////////////////////////////////////////////
 
-                //     // Modify output pixel y[2k] by sequence g_excite
-                //     pixel_t *y_p = imageY.buf + (indexY+plane);
-                //     float sum1 = 0;
-                //     for (int i = 0; i < DIM; i++) {
-                //         const int n1 = i - H;
-                //         sum1 += 
-                //         y_p[n1*planes] -= g_excite[i];
-                        
-                //     }
-                //     for (int j = 0; j < DIM; j++) {
-                //         const int n2 = j - H;
-                //         const int stride = imageY.stride;
-                //         y_p[n2*stride*planes] -= g_excite[j];
-                //     }
-                    
-                // }
-
-            }
-        }
-
-        // Step 3: Write sub-image to pyramid
-        // Modification for Task 4: Also save subimage
-        copy_image(&imageY, &laplacianLevels[level], 0);
-        for (int row = 0; row < imageY.rows; row++) {
-            for (int col = 0; col < imageY.cols; col++) {
-                // Pixel to read from imageY
-                const int row_flipped = imageY.rows - row - 1;
-                const int indexCurrent = 
-                    (row_flipped * imageY.stride + col) 
-                    * imageY.num_components;
-                
-                // Calculate pyramid coordinates and array index
-                // Flip n2 because of BMP coordinate system
-                const int n1 = col;
-                const int n2 = total_height - accessed_rows - 1;
-                const int indexPyramid = 
-                    (n2 * imgLaplacianPyramid.stride + n1) 
-                    * imgLaplacianPyramid.num_components;
-                
-                // Write pixel from imageY to pyramid
-                for (int plane = 0; plane < imageY.num_components; plane++) {
-                    imgLaplacianPyramid.buf[indexPyramid+plane] = 
-                        imageY.buf[indexCurrent+plane];
-                }
-            }
-
-            // Ready to write next row
-            // printf("%d\n", accessed_rows);
-            accessed_rows++;
-        }
-
-        // Ready for next level of pyramid
-        copy_image(&imageXLowRes, &imageX, H);
-    }
-
-    // Output, level shift by half max magnitude to illustrate +/- values
-    perform_level_shift(&imgLaplacianPyramid, 0.5);
-    export_image_as_bmp(&imgLaplacianPyramid, outputFile);
+    image stitched;
 
 
+    /*
     ////////////////////////////////////////
     // Task 3: Reconstruct original image //
     ////////////////////////////////////////
@@ -698,4 +519,154 @@ void design_windowed_sinc_filter(pixel_t *h_sinc, int extent, float stretch) {
         }
     }
     printf("DC gain normalized: %f\n", dc_gain_normalized);
+}
+
+
+void create_laplacian_subimages(image *image_in, image *subimages, int D, int H) {
+    puts("Part 1> Laplacian Pyramid");
+
+    // Design windowed sinc interpolator
+    // Confine bandwidth to (-pi/2, pi/2)^2
+    // Because this filter is designed to interpolate from a downsampled 
+    // image, we don't need to stretch the sinc.
+    // Because the sample density is increasing.
+    // See Ch 3 Pg 15 Sample density increase.
+    puts("Separable interpolator g[n]");
+    pixel_t g_interp[2*H+1];
+    design_windowed_sinc_filter(g_interp, H, 1.0);
+
+    // Design windowed stretched sinc
+    // Reminder: Use apply_separable_filters_2n() to apply filter
+    puts("Separable stretched sinc h[n]");
+    pixel_t h_sinc[2*H+1];
+    design_windowed_sinc_filter(h_sinc, H, 2.0);
+
+
+    // Create sub-images of pyramid
+    int accessed_rows = 0;
+    image imageX, imageXLowRes, imageY;
+    copy_image(image_in, &imageX, H);
+    // imageX = image0;
+    for (int level = 0; level <= D; level++) {
+        printf("Level %d\n", level);
+        printf("Starting row: %d\n", accessed_rows);
+
+        // TODO:
+        // 1. Obtain x_d and x_{d+1}, where d is the current level
+        // 2. Form the Laplacian detail image
+        // 3. Write the Laplacian detail image to pyramid
+
+        // Step 1: Obtain x_d and x_{d+1}
+        //
+        // Apply decimation filter to image x_d (every second pixel)
+        // copy_image(&imageCurrent, &imagePrev, H);
+        perform_boundary_extension(&imageX);
+        apply_separable_filters_2n(&imageX, &imageXLowRes, 
+            h_sinc, h_sinc, H, H
+        );
+
+        // Step 2: Form Laplacian detail image
+        //
+        // y_d[n] = x_d[n] - sum( x_{d+1}[k] g[n-2k] )
+        //
+        // Using input-based implementation.
+        // This means that for every pixel in x_{d+1}, we add something to
+        // x_d.
+
+        // Set y_d[n] = x_d[n]
+        copy_image(&imageX, &imageY, H);
+
+        // TODO: finish.
+        // For each location k in x_{d+1}, modify y_d[2k]
+        // k = [col, row]
+        for (int row = 0; row < imageXLowRes.rows; row++) {
+            for (int col = 0; col < imageXLowRes.cols; col++) {
+                // Pixel index for x_{d+1}[k]
+                // This acts as an "excitation source" for g_interp
+                const int planes = imageXLowRes.num_components;
+                const int index = 
+                    (row * imageXLowRes.stride + col) * planes;
+                
+                // Pixel index for y_d[2k]
+                // This image is scaled up by a factor of 2
+                const int indexY = 2*(row * imageY.stride + col) * planes;
+
+                // Estimate x_d[2k] from x_{d+1}[k]
+                // Note that this is a sequence, not a single value?
+
+                // Direct implementation
+                // y_d[2k] = x_d[2k] - x_{d+1}[k] * sinc * sinc
+                for (int plane = 0; plane < planes; plane++) {
+                    // Obtain direct 2D PSF values
+                    // Also "excite" the values of g_direct by x_{d+1}[k]
+                    const int DIM = 2*H+1;
+                    pixel_t g_direct[DIM*DIM];
+                    for (int r = 0; r < DIM; r++) {
+                        for (int c = 0; c < DIM; c++) {
+                            g_direct[r*DIM + c] = g_interp[r] * g_interp[c] 
+                                * imageXLowRes.buf[index+plane];
+                        }
+                    }
+
+                    // Apply excited PSF to output image
+                    pixel_t *y_p = imageY.buf + (indexY+plane);
+                    for (int r = 0; r < DIM; r++) {
+                        for (int c = 0; c < DIM; c++) {
+                            const int n1 = c - H;
+                            const int n2 = r - H;
+                            const int stride = imageY.stride;
+
+                            y_p[(n2*stride + n1) * planes] -= 
+                                g_direct[r*DIM + c];
+                        }
+                    }
+
+                    // Hack: x_d[2k+1] = x_{d+1}[k]
+                    // This seems wrong, but whatever.
+                    const int plusOneRow = 1 * planes;
+                    const int plusOneCol = 1*imageY.stride*planes;
+                    y_p[plusOneRow] -= imageXLowRes.buf[index+plane];
+                    y_p[plusOneCol] -= imageXLowRes.buf[index+plane];
+                    y_p[plusOneRow+plusOneCol] -= imageXLowRes.buf[index+plane];
+                }
+
+            }
+        }
+
+        // Step 3: Write sub-image to pyramid
+        // Modification for Task 4: Also save subimage
+        copy_image(&imageY, &subimages[level], 0);
+        for (int row = 0; row < imageY.rows; row++) {
+            for (int col = 0; col < imageY.cols; col++) {
+                // // Pixel to read from imageY
+                // const int row_flipped = imageY.rows - row - 1;
+                // const int indexCurrent = 
+                //     (row_flipped * imageY.stride + col) 
+                //     * imageY.num_components;
+                
+                // // Calculate pyramid coordinates and array index
+                // // Flip n2 because of BMP coordinate system
+                // const int n1 = col;
+                // const int n2 = total_height - accessed_rows - 1;
+                // const int indexPyramid = 
+                //     (n2 * imgLaplacianPyramid.stride + n1) 
+                //     * imgLaplacianPyramid.num_components;
+                
+                // // Write pixel from imageY to pyramid
+                // for (int plane = 0; plane < imageY.num_components; plane++) {
+                //     imgLaplacianPyramid.buf[indexPyramid+plane] = 
+                //         imageY.buf[indexCurrent+plane];
+                // }
+            }
+
+            // Ready to write next row
+            // printf("%d\n", accessed_rows);
+            accessed_rows++;
+        }
+
+        // Ready for next level of pyramid
+        copy_image(&imageXLowRes, &imageX, H);
+    }
+
+
 }
