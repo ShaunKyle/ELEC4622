@@ -27,7 +27,8 @@ Reconstruct image from Laplacian pyramid:\n\
 \n\
 Option      Description\n\
 -o <file>   Specify output file (default: output.bmp)\n\
--g          Gaussian pyramid instead of Laplacian.\n\
+-g          Gaussian pyramid instead of Laplacian\n\
+-r          Reconstruct original image from Laplacian pyramid\n\
 ";
 
 int main (int argc, char *argv[]) {
@@ -47,9 +48,10 @@ int main (int argc, char *argv[]) {
     int H = 0;                  // <H>
     char * outputFile = NULL;           // -o <outputFile>
     bool gaussianPyramidFlag = false;   // -g
+    bool reconstructionFlag = false;    // -r
 
     // Parse command-line arguments
-    enum { O, G, NOT_OPTION } currentArg, prevArg = NOT_OPTION;
+    enum { O, G, R, NOT_OPTION } currentArg, prevArg = NOT_OPTION;
     for (int i_arg = 1; i_arg < argc; i_arg++) {
         // Check if current argument is an option flag. If so, then the next 
         // argument will contain the value of that option.
@@ -59,6 +61,10 @@ int main (int argc, char *argv[]) {
         else if (strcmp(argv[i_arg], "-g") == 0) {
             currentArg = G;
             gaussianPyramidFlag = true;
+        }
+        else if (strcmp(argv[i_arg], "-r") == 0) {
+            currentArg = R;
+            reconstructionFlag = true;
         }
         else {
             currentArg = NOT_OPTION;
@@ -447,14 +453,19 @@ int main (int argc, char *argv[]) {
     }
 
 
-    ////////////////////////////
-    // Output for task 1 or 2 //
-    ////////////////////////////
+    ////////////////////////////////////////
+    // Task 3: Reconstruct original image //
+    ////////////////////////////////////////
 
+    if (reconstructionFlag) {
+        puts("\nTask 3> Reconstruction");
+        if (gaussianPyramidFlag) {
+            puts("No Laplacian pyramid available");
+            return EXIT_FAILURE;
+        }
 
-    ////////////////////////////////////////////
-    // Task 3 & 4: Reconstruct original image //
-    ////////////////////////////////////////////
+        
+    }
     
 
     return EXIT_SUCCESS;
