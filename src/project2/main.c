@@ -128,7 +128,9 @@ int main (int argc, char *argv[]) {
 
     printf("D = %d\n", D);
     printf("H = %d\n", H);
-    printf("G = %s\n\n", gaussianPyramidFlag ? "Gaussian" : "Laplacian");
+    printf("G = %s\n", gaussianPyramidFlag ? "Gaussian" : "Laplacian");
+    printf("R = %s\n\n", reconstructionFlag ? 
+        "Reconstruct original" : "No reconstruction");
 
     // Load input bitmap file
     bmp input_bmp;
@@ -137,6 +139,9 @@ int main (int argc, char *argv[]) {
         print_bmp_file_error(fileErr);
         return EXIT_FAILURE;
     }
+
+    // Save original height for Task 3
+    const int original_height = input_bmp.rows;
     
     printf("Info about %s\n", inputFile);
     printf("Width x Height: %dx%d px\n", input_bmp.cols, input_bmp.rows);
@@ -464,6 +469,23 @@ int main (int argc, char *argv[]) {
             return EXIT_FAILURE;
         }
 
+        // Info about original image
+        printf("Original image height: %d\n\n", original_height);
+
+        // Load Laplacian pyramid BMP
+        bmp pyramid_bmp;
+        int fileErr2 = load_bmp(&pyramid_bmp, outputFile);
+        if (fileErr2 != 0) {
+            print_bmp_file_error(fileErr2);
+            return EXIT_FAILURE;
+        }
+        printf("Info about %s (Laplacian pyramid)\n", outputFile);
+        printf("Width x Height: %dx%d px\n",pyramid_bmp.cols,pyramid_bmp.rows);
+        printf("Components: %d\n", pyramid_bmp.num_components);
+        printf("Line bytes: %d\n", pyramid_bmp.line_bytes);
+        printf("Alignment padding bytes: %d\n\n", pyramid_bmp.alignment_bytes);
+
+        // Inverting the Laplacian Transform
         
     }
     
