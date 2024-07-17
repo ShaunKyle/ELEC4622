@@ -168,7 +168,7 @@ int main (int argc, char *argv[]) {
         image stitched;
         const int planes = image1.num_components;
         stitched.rows = image1.rows;
-        stitched.cols = image1.cols * 3 / 2;
+        stitched.cols = image1.cols;
         stitched.border = 0;
         stitched.stride = stitched.cols + 2*stitched.border;
         stitched.num_components = image1.num_components;
@@ -189,25 +189,25 @@ int main (int argc, char *argv[]) {
                 }
             }
 
-            // Image 1 and 2 stitching
-            for (int c = 0; c < (image1.cols/2); c++) {
-                const int c1 = c + image1.cols/2;
-                const int index1 = (r*image1.stride + c1) * planes;
-                const int index2 = (r*image2.stride + c) * planes;
-                const int sc = c + image1.cols/2;
-                const int indexS = (r*stitched.stride + sc) * planes;
+            // // Image 1 and 2 stitching
+            // for (int c = 0; c < (image1.cols/2); c++) {
+            //     const int c1 = c + image1.cols/2;
+            //     const int index1 = (r*image1.stride + c1) * planes;
+            //     const int index2 = (r*image2.stride + c) * planes;
+            //     const int sc = c + image1.cols/2;
+            //     const int indexS = (r*stitched.stride + sc) * planes;
 
-                for (int p = 0; p < planes; p++) {
-                    stitched.buf[indexS+p] = (image1.buf[index1+p] + image2.buf[index2+p]) / 2;
-                }
+            //     for (int p = 0; p < planes; p++) {
+            //         stitched.buf[indexS+p] = (image1.buf[index1+p] + image2.buf[index2+p]) / 2;
+            //     }
                 
-            }
+            // }
 
             // Image 2 on right
             for (int c = 0; c < (image1.cols/2); c++) {
                 const int c2 = c + image1.cols/2;
                 const int index2 = (r*image2.stride + c2) * planes;
-                const int sc = c + image1.cols;
+                const int sc = c + image1.cols/2;
                 const int indexS = (r*stitched.stride + sc) * planes;
 
                 for (int p = 0; p < planes; p++) {
@@ -272,7 +272,7 @@ int main (int argc, char *argv[]) {
         // Allocate memory for stitchedLapLevels[level] image
         const int planes = img1.num_components;
         stitchedLapLevels[level].rows = img1.rows;
-        stitchedLapLevels[level].cols = img1.cols * 3 / 2;
+        stitchedLapLevels[level].cols = img1.cols;
         stitchedLapLevels[level].border = 0;
         stitchedLapLevels[level].stride = stitchedLapLevels[level].cols + 2*stitchedLapLevels[level].border;
         stitchedLapLevels[level].num_components = img1.num_components;
@@ -297,25 +297,11 @@ int main (int argc, char *argv[]) {
                 }
             }
 
-            // Image 1 and 2 stitching
-            for (int c = 0; c < (img1.cols/2); c++) {
-                const int c1 = c + img1.cols/2;
-                const int index1 = (r*img1.stride + c1) * planes;
-                const int index2 = (r*img2.stride + c) * planes;
-                const int sc = c + img1.cols/2;
-                const int indexS = (r*stitchedLapLevels[level].stride + sc) * planes;
-
-                for (int p = 0; p < planes; p++) {
-                    stitchedLapLevels[level].buf[indexS+p] = (img1.buf[index1+p] + img2.buf[index2+p]) / 2;
-                }
-                
-            }
-
             // Image 2 on right
             for (int c = 0; c < (img1.cols/2); c++) {
                 const int c2 = c + img1.cols/2;
                 const int index2 = (r*img2.stride + c2) * planes;
-                const int sc = c + img1.cols;
+                const int sc = c + img1.cols/2;
                 const int indexS = (r*stitchedLapLevels[level].stride + sc) * planes;
 
                 for (int p = 0; p < planes; p++) {
