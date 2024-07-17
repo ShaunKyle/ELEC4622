@@ -532,7 +532,7 @@ int main (int argc, char *argv[]) {
                                     const int n2 = r - H;
                                     const int stride = imageX.stride;
 
-                                    x_p[(n2*stride + n1) * planes] -= 
+                                    x_p[(n2*stride + n1) * planes] += 
                                         g_direct[r*DIM + c];
                                 }
                             }
@@ -541,9 +541,9 @@ int main (int argc, char *argv[]) {
                             // This seems wrong, but whatever.
                             const int plusOneRow = 1 * planes;
                             const int plusOneCol = 1*imageX.stride*planes;
-                            x_p[plusOneRow] -= imageXLowRes.buf[index+plane];
-                            x_p[plusOneCol] -= imageXLowRes.buf[index+plane];
-                            x_p[plusOneRow+plusOneCol] -= imageXLowRes.buf[index+plane];
+                            x_p[plusOneRow] += imageXLowRes.buf[index+plane];
+                            x_p[plusOneCol] += imageXLowRes.buf[index+plane];
+                            x_p[plusOneRow+plusOneCol] += imageXLowRes.buf[index+plane];
                         }
                     }
                 }

@@ -594,7 +594,7 @@ int main (int argc, char *argv[]) {
                         const int indexX = 2*(row * imageX.stride + col) * planes;
 
                         // Direct implementation
-                        // y_d[2k] = x_d[2k] - x_{d+1}[k] * sinc * sinc
+                        // y_d[2k] = x_d[2k] + x_{d+1}[k] * sinc * sinc
                         for (int plane = 0; plane < planes; plane++) {
                             // Obtain direct 2D PSF values
                             // Also "excite" the values of g_direct by x_{d+1}[k]
@@ -615,7 +615,7 @@ int main (int argc, char *argv[]) {
                                     const int n2 = r - H;
                                     const int stride = imageX.stride;
 
-                                    x_p[(n2*stride + n1) * planes] -= 
+                                    x_p[(n2*stride + n1) * planes] += 
                                         g_direct[r*DIM + c];
                                 }
                             }
@@ -624,9 +624,9 @@ int main (int argc, char *argv[]) {
                             // This seems wrong, but whatever.
                             const int plusOneRow = 1 * planes;
                             const int plusOneCol = 1*imageX.stride*planes;
-                            x_p[plusOneRow] -= imageXLowRes.buf[index+plane];
-                            x_p[plusOneCol] -= imageXLowRes.buf[index+plane];
-                            x_p[plusOneRow+plusOneCol] -= imageXLowRes.buf[index+plane];
+                            x_p[plusOneRow] += imageXLowRes.buf[index+plane];
+                            x_p[plusOneCol] += imageXLowRes.buf[index+plane];
+                            x_p[plusOneRow+plusOneCol] += imageXLowRes.buf[index+plane];
                         }
                     }
                 }
