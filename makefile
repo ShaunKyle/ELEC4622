@@ -38,7 +38,7 @@
 # https://nullprogram.com/blog/2017/08/20/
 
 # Ensure that phony targets are not interpreted as file or directory names
-.PHONY: all, clean, test, check, lab1, lab2, filter, project1, project2, project24, project25, project3
+.PHONY: all, clean, test, check, lab1, lab2, filter, project1, project2, project24, project25, project3, motion
 
 # DEBUG=1 -> Debug mode (no optimization, produce debug info)
 # DEBUG=0 -> Release mode (full optimization, strip debug info)
@@ -100,6 +100,7 @@ ifeq ($(OS),Windows_NT)
 LAB1:=$(BUILDDIR)/lab1/lab1.exe
 LAB2:=$(BUILDDIR)/lab2/lab2.exe
 FILTEREXAMPLE:=$(BUILDDIR)/filtering_example/filter.exe
+MOTION:=$(BUILDDIR)/motion_example/motion.exe
 PROJECT1:=$(BUILDDIR)/project1/project1.exe
 PROJECT2:=$(BUILDDIR)/project2/project2.exe
 PROJECT24:=$(BUILDDIR)/project24/project24.exe
@@ -109,6 +110,7 @@ else
 LAB1:=$(BUILDDIR)/lab1/lab1
 LAB2:=$(BUILDDIR)/lab2/lab2
 FILTEREXAMPLE:=$(BUILDDIR)/filtering_example/filter
+MOTION:=$(BUILDDIR)/motion_example/motion
 PROJECT1:=$(BUILDDIR)/project1/project1
 PROJECT2:=$(BUILDDIR)/project2/project2
 PROJECT24:=$(BUILDDIR)/project24/project24
@@ -149,6 +151,11 @@ FILTEREXAMPLESRC += $(wildcard $(SRCDIR)/filtering_example/*.cpp)
 FILTEREXAMPLESRC += $(wildcard $(SRCDIR)/filtering_example/*/*.cpp)
 FILTEREXAMPLEINC += $(wildcard $(SRCDIR)/filtering_example/*.h)
 FILTEREXAMPLEINC += $(wildcard $(SRCDIR)/filtering_example/*/*.h)
+
+MOTIONSRC += $(wildcard $(SRCDIR)/motion_example/*.cpp)
+MOTIONSRC += $(wildcard $(SRCDIR)/motion_example/*/*.cpp)
+MOTIONINC += $(wildcard $(SRCDIR)/motion_example/*.h)
+MOTIONINC += $(wildcard $(SRCDIR)/motion_example/*/*.h)
 
 PROJECT1SRC += $(wildcard $(SRCDIR)/project1/*.c)
 PROJECT1SRC += $(wildcard $(SRCDIR)/project1/*/*.c)
@@ -213,6 +220,10 @@ FILTEREXAMPLEOBJ := $(addsuffix .o, \
 					$(addprefix $(BUILDDIR)/filtering_example/, \
 					$(notdir $(basename $(FILTEREXAMPLESRC)))))
 
+MOTIONOBJ :=	$(addsuffix .o, \
+				$(addprefix $(BUILDDIR)/motion_example/, \
+				$(notdir $(basename $(MOTIONSRC)))))
+
 PROJECT1OBJ += 	$(addsuffix .o, \
 				$(addprefix $(BUILDDIR)/project1/, \
 				$(notdir $(basename $(PROJECT1SRC)))))
@@ -238,7 +249,7 @@ PROJECT3OBJ += 	$(addsuffix .o, \
 # The prerequisites to phony target "all" are the final executables to be built.
 # Because "all" is the first target in the makefile, running the command `make`
 # in a terminal will be equivalent to `make all`.
-all: lab1 lab2 filter project1 project2 project24 project25 project3
+all: lab1 lab2 filter project1 project2 project24 project25 project3, motion
 
 # Build directory must exist as a prerequisite for every other target.
 # However, we don't want to force every target to update whenever the contents
@@ -252,6 +263,7 @@ ifeq ($(OS),Windows_NT)
 	mkdir $(BUILDDIR)\lab2
 	mkdir $(BUILDDIR)\shaun_bmp
 	mkdir $(BUILDDIR)\filtering_example
+	mkdir $(BUILDDIR)\motion_example
 	mkdir $(BUILDDIR)\project1
 	mkdir $(BUILDDIR)\project2
 	mkdir $(BUILDDIR)\project24
@@ -262,6 +274,7 @@ else
 	mkdir $(BUILDDIR)/lab2
 	mkdir $(BUILDDIR)/shaun_bmp
 	mkdir $(BUILDDIR)/filtering_example
+	mkdir $(BUILDDIR)/motion_example
 	mkdir $(BUILDDIR)/project1
 	mkdir $(BUILDDIR)/project2
 	mkdir $(BUILDDIR)/project24
@@ -335,6 +348,18 @@ $(BUILDDIR)/filtering_example/%.o: $(SRCDIR)/filtering_example/%.cpp | $(BUILDDI
 	$(CPP) $(CPPFLAGS) -c -o $@ $<
 
 $(BUILDDIR)/filtering_example/%.o: $(SRCDIR)/filtering_example/*/%.cpp | $(BUILDDIR)
+	$(CPP) $(CPPFLAGS) -c -o $@ $<
+
+# Build rules for motion.exe (example code for lab5)
+motion: $(MOTION)
+
+$(MOTION): $(MOTIONOBJ)
+	$(LINK) -o $@ $(MOTIONOBJ)
+
+$(BUILDDIR)/motion_example/%.o: $(SRCDIR)/motion_example/%.cpp | $(BUILDDIR)
+	$(CPP) $(CPPFLAGS) -c -o $@ $<
+
+$(BUILDDIR)/motion_example/%.o: $(SRCDIR)/motion_example/*/%.cpp | $(BUILDDIR)
 	$(CPP) $(CPPFLAGS) -c -o $@ $<
 
 # Build rules for project1.exe
