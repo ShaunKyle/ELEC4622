@@ -259,6 +259,20 @@ void copy_image(image *image_info, image *image_copy, int border) {
     // Remember to perform boundary extension on image_copy...
 }
 
+//! \brief Allocates memory block for a new image
+void init_image(image *image_in, int rows, int cols, int border, int planes) {
+    image_in->rows = rows;
+    image_in->cols = cols;
+    image_in->border = border;
+    image_in->stride = cols + 2*border;
+    image_in->num_components = planes;
+    image_in->handle = malloc(
+        image_in->stride * (rows+2*border) * planes * sizeof(pixel_t)
+    );
+    image_in->buf = image_in->handle + 
+        (border * image_in->stride + border) * planes;
+}
+
 
 //////////////////////
 // Image processing //
