@@ -158,6 +158,7 @@ int main (int argc, char *argv[]) {
     //////////////////////////////////////
 
     image source, target, output;
+    image target2, output2;
 
     read_image_from_bmp(&source, &source_bmp, 0);
     read_image_from_bmp(&target, &target_bmp, 0);
@@ -169,11 +170,22 @@ int main (int argc, char *argv[]) {
     const int N_BLOCKS = (target.rows / B) * (target.cols / B);
     printf("No. of blocks: %d\n\n", N_BLOCKS);
     mvector_t vec[N_BLOCKS];
+    mvector2_t vec2[N_BLOCKS];
     for (int index = 0, r = 0; r < (target.rows - B); r += B) {
         for (int c = 0; c < (target.cols - B); c += B) {
             vec[index] = estimate_motion_block(&source, &target, r, c, B, S, 
                 (minimizeMSEFlag ? MSE : MAD)
             );
+
+            // Task 3: Half-pel grid
+            vec2[index] = estimate_motion_block_bilinear(&source, &target, r, c, B, S, 
+                (minimizeMSEFlag ? MSE : MAD), 2
+            );
+
+            // // Task 4: Quarter-pel grid
+            // vec2[index] = estimate_motion_block_bilinear(&source, &target, r, c, B, S, 
+            //     (minimizeMSEFlag ? MSE : MAD), 4
+            // );
 
             // Information about block motion
             // printf("Block %d\nStarting pos: [%d, %d]\n", index, c, r);
@@ -185,9 +197,12 @@ int main (int argc, char *argv[]) {
     }
 
     // Perform motion compensation on target frame
+    copy_image(&target, &target2, 0);
     for (int index = 0, r = 0; r < (target.rows - B); r += B) {
         for (int c = 0; c < (target.cols - B); c += B) {
             compensate_motion_block(&source, &target, vec[index], r, c, B);
+            compensate_motion_block_fractional(&source, &target2, vec2[index], 
+            r, c, B);
         }
     }
 
@@ -195,6 +210,11 @@ int main (int argc, char *argv[]) {
     mono_to_RGB(&target, &output);
     perform_scaling(&output, 0.5);
     perform_level_shift(&output, 0.5);
+
+    mono_to_RGB(&target2, &output2);
+    perform_scaling(&output2, 0.5);
+    perform_level_shift(&output2, 0.5);
+
     for (int index = 0, r = 0; r < (target.rows - B); r += B) {
         for (int c = 0; c < (target.cols - B); c += B) {
             // Row and col for centre of block, and end of motion vector
@@ -202,6 +222,9 @@ int main (int argc, char *argv[]) {
             const int c_centre = c + B/2;
             const int r_end = r_centre + vec[index].y;
             const int c_end = c_centre + vec[index].x;
+
+            const int r_end_fractional = r_centre + vec2[index].y/vec2[index].precision;
+            const int c_end_fractional = c_centre + vec2[index].x/vec2[index].precision;
             // printf("Start: [%d, %d]\n", c_centre, r_centre);
             // printf("Vec:   (%d, %d)\n", vec[index].x, vec[index].y);
             // printf("End:   [%d, %d]\n\n", c_end, r_end);
@@ -210,11 +233,16 @@ int main (int argc, char *argv[]) {
             const int centre = ((r_centre * output.stride) + c_centre) * 3;
             const int end = ((r_end * output.stride) + c_end) * 3;
 
+            const int end_fractional = ((r_end_fractional * output.stride) + c_end_fractional) * 3;
+
             // Draw motion vector in purple
             const int v1 = vec[index].x;
             const int v2 = vec[index].y;
             const int c1 = c_centre;
             const int c2 = r_centre;
+
+            const int v1_fractional = vec2[index].x/vec2->precision;
+            const int v2_fractional = vec2[index].y/vec2->precision;
 
             if (c_centre > c_end) {
                 for (int n1 = c_end; n1 <= c_centre; n1++) {
@@ -246,15 +274,57 @@ int main (int argc, char *argv[]) {
                 }
             }
 
+
+            // Fractional line
+            if (c_centre > c_end_fractional) {
+                for (int n1 = c_end_fractional; n1 <= c_centre; n1++) {
+                    int n2_fractional = c2 + ((n1 - c1) * v2_fractional / v1_fractional);
+                    int i_fractional = ((n2_fractional * output.stride) + n1) * 3;
+                    output2.buf[i_fractional+1] = 0;
+                }
+            }
+            else {
+                for (int n1 = c_centre; n1 <= c_end_fractional; n1++) {
+                    int n2_fractional = c2 + ((n1 - c1) * v2_fractional / v1_fractional);
+                    int i_fractional = ((n2_fractional * output.stride) + n1) * 3;
+                    output2.buf[i_fractional+1] = 0;
+                }
+            }
+
+            if (r_centre > r_end_fractional) {
+                for (int n2 = r_end_fractional; n2 <= r_centre; n2++) {
+                    int n1_fractional = c1 + ((n2 - c2) * v1_fractional / v2_fractional);
+                    int i_fractional = ((n2 * output.stride) + n1_fractional) * 3;
+                    output2.buf[i_fractional+1] = 0;
+                }
+            }
+            else {
+                for (int n2 = r_centre; n2 <= r_end_fractional; n2++) {
+                    int n1_fractional = c1 + ((n2 - c2) * v1_fractional / v2_fractional);
+                    int i_fractional = ((n2 * output.stride) + n1_fractional) * 3;
+                    output2.buf[i_fractional+1] = 0;
+                }
+            }
+
+
+
             // Put red dot in centre of block
             output.buf[centre] = 0;
             output.buf[centre+1] = 0;
             output.buf[centre+2] = 1;
 
+            output2.buf[centre] = 0;
+            output2.buf[centre+1] = 0;
+            output2.buf[centre+2] = 1;
+
             // Put green dot at end of motion vector
             output.buf[end] = 0;
             output.buf[end+1] = 1;
             output.buf[end+2] = 0;
+
+            output2.buf[end_fractional] = 0;
+            output2.buf[end_fractional+1] = 1;
+            output2.buf[end_fractional+2] = 0;
 
             // Next block
             index++;
@@ -262,9 +332,7 @@ int main (int argc, char *argv[]) {
     }
 
     export_image_as_bmp(&output, outputFile);
-
-    
-
+    export_image_as_bmp(&output2, "out_bilinear.bmp");
 
     return EXIT_SUCCESS;
 }
