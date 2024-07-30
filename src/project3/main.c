@@ -184,6 +184,13 @@ int main (int argc, char *argv[]) {
         }
     }
 
+    // Perform motion compensation on target frame
+    for (int index = 0, r = 0; r < (target.rows - B); r += B) {
+        for (int c = 0; c < (target.cols - B); c += B) {
+            compensate_motion_block(&source, &target, vec[index], r, c, B);
+        }
+    }
+
     // Draw motion vectors describing motion of each target frame block
     mono_to_RGB(&target, &output);
     perform_scaling(&output, 0.5);

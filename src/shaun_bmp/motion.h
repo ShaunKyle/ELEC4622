@@ -18,7 +18,11 @@ typedef enum norm_type norm_e;
 
 mvector_t estimate_motion_block(
     image *source, image *target, int start_row, int start_col, 
-    int block_size, int search_bounds, norm_e norm);
-void compensate_for_motion(image *source, image *target, mvector_t vec);
+    int block_size, int search_bounds, norm_e norm
+);
+void compensate_motion_block(
+    image *source, image *target, mvector_t vec, 
+    int start_row, int start_col, int block_size
+);
 
 #endif // SHAUN_BMP_MOTION_H

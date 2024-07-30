@@ -80,3 +80,29 @@ int start_col, int block_size, int search_bound, norm_e norm_choice) {
     printf("DEBUG: (%d, %d) norm is %f\n", best_vec.x, best_vec.y, best_norm);
     return best_vec;
 }
+
+//! \brief Motion compensation for target frame by copying displaced blocks 
+// from reference frame.
+void compensate_motion_block(image *source, image *target, mvector_t vec, 
+int start_row, int start_col, int block_size) {
+    // Coordinate for start of displaced block in reference frame
+    const int src_row = start_row - vec.y;
+    const int src_col = start_col - vec.x;
+
+    // Pointer to start of target block, and start of displaced reference block
+    const int planes = source->num_components;
+    pixel_t *source_p = 
+        source->buf + (src_row * source->stride + src_col) * planes;
+    pixel_t *target_p = 
+        target->buf + (start_row * target->stride + start_col) * planes;
+    
+    // Overwrite target block with displaced reference block
+    for (int r = 0; r < block_size; r++) {
+        for (int c = 0; c < block_size; c++) {
+            const int index = (r*source->stride + c) * planes;
+            for (int p = 0; p < planes; p++) {
+                target_p[index+p] = source_p[index+p];
+            }
+        }
+    }
+}
