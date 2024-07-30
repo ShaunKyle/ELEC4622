@@ -158,7 +158,7 @@ int main (int argc, char *argv[]) {
     //////////////////////////////////////
 
     image source, target, output;
-    image target2, output2;
+    image output2;
 
     read_image_from_bmp(&source, &source_bmp, 0);
     read_image_from_bmp(&target, &target_bmp, 0);
@@ -176,6 +176,7 @@ int main (int argc, char *argv[]) {
             vec[index] = estimate_motion_block(&source, &target, r, c, B, S, 
                 (minimizeMSEFlag ? MSE : MAD)
             );
+            // printf("vec[%d] = (%d, %d)\n", index, vec[index].x, vec[index].y);
 
             // Task 3: Half-pel grid
             vec2[index] = estimate_motion_block_bilinear(&source, &target, r, c, B, S, 
@@ -197,21 +198,30 @@ int main (int argc, char *argv[]) {
     }
 
     // Perform motion compensation on target frame
-    copy_image(&target, &target2, 0);
+    // copy_image(&target, &target2, 0);
+
+    image blank, blank2;
+    copy_image(&target, &blank, 0);
+    perform_scaling(&blank, 0.0);
+    copy_image(&blank, &blank2, 0);
     for (int index = 0, r = 0; r < (target.rows - B); r += B) {
         for (int c = 0; c < (target.cols - B); c += B) {
-            compensate_motion_block(&source, &target, vec[index], r, c, B);
-            compensate_motion_block_fractional(&source, &target2, vec2[index], 
+            compensate_motion_block(&source, &blank, vec[index], r, c, B);
+            compensate_motion_block_fractional(&source, &blank2, vec2[index], 
             r, c, B);
+            printf("vec[%d] = (%d, %d)\n", index, vec[index].x, vec[index].y);
+
+            // Next block
+            index++;
         }
     }
 
     // Draw motion vectors describing motion of each target frame block
-    mono_to_RGB(&target, &output);
+    mono_to_RGB(&blank, &output);
     perform_scaling(&output, 0.5);
     perform_level_shift(&output, 0.5);
 
-    mono_to_RGB(&target2, &output2);
+    mono_to_RGB(&blank2, &output2);
     perform_scaling(&output2, 0.5);
     perform_level_shift(&output2, 0.5);
 
