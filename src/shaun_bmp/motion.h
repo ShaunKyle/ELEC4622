@@ -3,14 +3,22 @@
 
 #include "image.h"
 
-typedef struct motion_vector mvector;
-
 struct motion_vector {
     int x;
     int y;
 };
 
-mvector estimate_motion(image *source, image *target, int search_bounds);
-void compensate_for_motion(image *source, image *target, mvector vec);
+enum norm_type {
+    MAD,    // Mean absolute difference
+    MSE,    // Mean squared error
+};
+
+typedef struct motion_vector mvector_t;
+typedef enum norm_type norm_e;
+
+mvector_t estimate_motion_block(
+    image *source, image *target, int start_row, int start_col, 
+    int block_size, int search_bounds, norm_e norm);
+void compensate_for_motion(image *source, image *target, mvector_t vec);
 
 #endif // SHAUN_BMP_MOTION_H

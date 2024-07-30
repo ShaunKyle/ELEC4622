@@ -1,46 +1,82 @@
 #include "motion.h"
 
-//! \brief Finds the motion vector which best describes the motion between the 
-//! reference and target frames.
-mvector estimate_motion(image *source, image *target, int search_bounds) {
-    // Assume that input images have already been sliced into equal blocks
-    const int block_width = source->cols;
-    const int block_height = source->rows;
+//! \brief Finds the motion vector which best describes the movement of a block 
+//! in the target frame.
+//!
+//! @param source       Reference image (frame 1)
+//! @param target       Target image (frame 2)
+//! @param start_row    Origin of block in target frame
+//! @param start_col    Origin of block in target frame
+//! @param block_size   Size of motion block (pels)
+//! @param search_bound Search range (pels) for motion vector in each direction
+//! @param norm_choice  Norm used for minimization criteria
+mvector_t estimate_motion_block(image *source, image *target, int start_row, 
+int start_col, int block_size, int search_bound, norm_e norm_choice) {
+    const int B = block_size;
+    const int S = search_bound;
+    const int planes = source->num_components;
 
-    mvector vec, best_vec;
-    int sad, best_sad;
+    mvector_t vec, best_vec;
+    pixel_t norm, best_norm;
 
-    best_sad = 999999999;
+    best_norm = 256*B*B;  //TODO: Why 256?
 
     // Search for best vector (x,y) using some optimization criterion
     // The search range is [-S,+S] pels in each direction
-    for (vec.y = -search_bounds; vec.y <= search_bounds; vec.y++) {
-        for (vec.x = -search_bounds; vec.x <= search_bounds; vec.x++) {
+    for (vec.y = -S; vec.y <= S; vec.y++) {
+        for (vec.x = -S; vec.x <= S; vec.x++) {
+            // Check if block translated by motion vector is contained within 
+            // the source frame. Skip this motion vector if outside.
+            // TODO: Leave a "border" so that all motion vectors are possible?
+            int src_row = start_row - vec.y;
+            int src_col = start_col - vec.x;
+            if ((src_row < 0) || (src_col < 0) || 
+                ((src_row+B) > source->rows) || 
+                ((src_col+B) > source->cols)) {
+                // printf("(%d, %d) translated out of source frame\n", vec.x, vec.y);
+                continue;
+            }
+            // printf("(%d, %d) within source frame\n", vec.x, vec.y);
 
-            // TODO: modification to ptrs for given vec?
+            // Calculate the norm of the displaced frame difference (DFD) 
+            // between the target block and displaced source block.
+            pixel_t *source_p = source->buf + 
+                (src_row * source->stride + src_col) * planes;
+            pixel_t *target_p = target->buf + 
+                (start_row * target->stride + start_col) * planes;
+            norm = 0;
+            for (int r = 0; r < B; r++) {
+                for (int c = 0; c < B; c++) {
+                    const int stride = source->stride;  //assume target is same
+                    const int index = (c + (r * stride)) * planes;
 
-            // Calculate sum-of-abs-differences (SAD) for given vec
-            pixel_t *source_p = source->buf;
-            pixel_t *target_p = target->buf;
-            sad = 0;
-            for (int r = 0; r < block_height; r++) {
-                for (int c = 0; c < block_width; c++) {
-                    const int index = 
-                        (c + (r * source->stride)) * source->num_components;
+                    // Calculate DFD
+                    pixel_t diff = target_p[index] - source_p[index];
                     // Side note: Don't bother using more than one color plane
                     // We care about the shapes, not the color.
-                    int diff = target_p[index] - source_p[index];
-                    sad += (diff < 0)?(-diff):diff;
+
+                    // Calculate norm
+                    // Note: In both cases, use sum rather than mean.
+                    if (norm_choice == MSE) {
+                        // puts("Chosen norm: Mean squared error");
+                        norm += (diff*diff);
+                    }
+                    else {
+                        // puts("Chosen norm: Mean absolute difference");
+                        norm += (diff < 0) ? (-diff) : diff;
+                    }
                 }
             }
 
-            // Check if SAD improved
-            if (sad < best_sad) {
-                best_sad = sad;
+            // Check if norm has improved for chosen motion vector
+            if (norm < best_norm) {
+                best_norm = norm;
                 best_vec = vec;
+                // printf("DEBUG: (%d, %d) norm is %f\n", best_vec.x, best_vec.y, best_norm);
             }
         }
     }
 
+    printf("DEBUG: (%d, %d) norm is %f\n", best_vec.x, best_vec.y, best_norm);
     return best_vec;
 }

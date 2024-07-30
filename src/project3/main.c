@@ -5,6 +5,7 @@
 
 #include "../shaun_bmp/bmp_io.h"
 #include "../shaun_bmp/image.h"
+#include "../shaun_bmp/motion.h"
 
 // CLI help message (usage, description, options list)
 const char CLI_HELP[] = "\
@@ -145,8 +146,8 @@ int main (int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
     
-    // printf("Info about %s\n", inputFile);
-    // printf("Width x Height: %dx%d px\n", input_bmp.cols, input_bmp.rows);
+    printf("Info about %s\n", targetFile);
+    printf("Width x Height: %dx%d px\n\n", target_bmp.cols, target_bmp.rows);
     // printf("Components: %d\n", input_bmp.num_components);
     // printf("Line bytes: %d\n", input_bmp.line_bytes);
     // printf("Alignment padding bytes: %d\n\n", input_bmp.alignment_bytes);
@@ -156,47 +157,48 @@ int main (int argc, char *argv[]) {
     //////////////////////////////////////
 
     image source, target, output;
-    image sourceBlock, targetBlock;
 
     read_image_from_bmp(&source, &source_bmp, 0);
     read_image_from_bmp(&target, &target_bmp, 0);
-    const int planes = source.num_components;
 
     // SAD = sum of absolute differences
     // MSE = mean square error
 
-    // Rough outline:
-    // 1. Extract block from <source> and <target>
-    // 2. Estimate motion vector between blocks
-    // 3. Repeat for all blocks
-    // 4. Draw motion vectors onto a copy of <target>
+    // Estimate motion vector for each block in target frame
+    const int N_BLOCKS = (target.rows / B) * (target.cols / B);
+    printf("No. of blocks: %d\n\n", N_BLOCKS);
+    mvector_t vec[N_BLOCKS];
+    for (int index = 0, r = 0; r < (target.rows - B); r += B) {
+        for (int c = 0; c < (target.cols - B); c += B) {
+            vec[index] = estimate_motion_block(&source, &target, r, c, B, S, 
+                (minimizeMSEFlag ? MSE : MAD)
+            );
 
-    // Testing: extract a block from <source> and <target>
-    init_image(&sourceBlock, B, B, 0, planes);
-    init_image(&targetBlock, B, B, 0, planes);
-    pixel_t *source_p = source.buf + 0;
-    pixel_t *target_p = target.buf + 0;
-    pixel_t *sblock_p = sourceBlock.buf;
-    pixel_t *tblock_p = targetBlock.buf;
-    for (int r = 0; r < B; r++) {
-        for (int c = 0; c < B; c++) {
-            const int frame_index = (c + (r * source.stride)) * planes;
-            const int block_index = (c + (r * sourceBlock.stride)) * planes;
-            for (int p = 0; p < planes; p++) {
-                sblock_p[block_index+p] = source_p[frame_index+p];
-                tblock_p[block_index+p] = target_p[frame_index+p];
-            }
-            
+            // Information about block motion
+            printf("Block %d\nStarting pos: [%d, %d]\n", index, c, r);
+            printf("vec(%d, %d)\n\n", vec[index].x, vec[index].y);
+
+            // Next block
+            index++;
         }
     }
 
-    export_image_as_bmp(&sourceBlock, "source_block.bmp");
-    export_image_as_bmp(&targetBlock, "target_block.bmp");
+    // // Draw motion vectors describing motion of each target frame block
+    // copy_image(&target, &output, 0);
+    // for (int index = 0, r = 0; r < (target.rows - B); r += B) {
+    //     for (int c = 0; c < (target.cols - B); c += B) {
+    //         // Middle of block
 
-    // Testing: Estimate motion vector
+    //         // Draw vector
 
+    //         // Next block
+    //         index++;
+    //     }
+    // }
 
-    // TODO: Deal with block size for end of row/col (could be smaller)
+    // export_image_as_bmp(&output, outputFile);
+
+    
 
 
     return EXIT_SUCCESS;
