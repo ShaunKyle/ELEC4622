@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
+#include <math.h>
 
 #include "../shaun_bmp/bmp_io.h"
 #include "../shaun_bmp/image.h"
@@ -183,20 +184,77 @@ int main (int argc, char *argv[]) {
         }
     }
 
-    // // Draw motion vectors describing motion of each target frame block
-    // copy_image(&target, &output, 0);
-    // for (int index = 0, r = 0; r < (target.rows - B); r += B) {
-    //     for (int c = 0; c < (target.cols - B); c += B) {
-    //         // Middle of block
+    // Draw motion vectors describing motion of each target frame block
+    mono_to_RGB(&target, &output);
+    perform_scaling(&output, 0.5);
+    perform_level_shift(&output, 0.5);
+    for (int index = 0, r = 0; r < (target.rows - B); r += B) {
+        for (int c = 0; c < (target.cols - B); c += B) {
+            // Row and col for centre of block, and end of motion vector
+            const int r_centre = r + B/2;
+            const int c_centre = c + B/2;
+            const int r_end = r_centre + vec[index].y;
+            const int c_end = c_centre + vec[index].x;
+            // printf("Start: [%d, %d]\n", c_centre, r_centre);
+            // printf("Vec:   (%d, %d)\n", vec[index].x, vec[index].y);
+            // printf("End:   [%d, %d]\n\n", c_end, r_end);
 
-    //         // Draw vector
+            // Memory buf index for centre of block
+            const int centre = ((r_centre * output.stride) + c_centre) * 3;
+            const int end = ((r_end * output.stride) + c_end) * 3;
 
-    //         // Next block
-    //         index++;
-    //     }
-    // }
+            // Draw motion vector in purple
+            const int v1 = vec[index].x;
+            const int v2 = vec[index].y;
+            const int c1 = c_centre;
+            const int c2 = r_centre;
 
-    // export_image_as_bmp(&output, outputFile);
+            if (c_centre > c_end) {
+                for (int n1 = c_end; n1 <= c_centre; n1++) {
+                    int n2 = c2 + ((n1 - c1) * v2 / v1);
+                    int i = ((n2 * output.stride) + n1) * 3;
+                    output.buf[i+1] = 0;
+                }
+            }
+            else {
+                for (int n1 = c_centre; n1 <= c_end; n1++) {
+                    int n2 = c2 + ((n1 - c1) * v2 / v1);
+                    int i = ((n2 * output.stride) + n1) * 3;
+                    output.buf[i+1] = 0;
+                }
+            }
+
+            if (r_centre > r_end) {
+                for (int n2 = r_end; n2 <= r_centre; n2++) {
+                    int n1 = c1 + ((n2 - c2) * v1 / v2);
+                    int i = ((n2 * output.stride) + n1) * 3;
+                    output.buf[i+1] = 0;
+                }
+            }
+            else {
+                for (int n2 = r_centre; n2 <= r_end; n2++) {
+                    int n1 = c1 + ((n2 - c2) * v1 / v2);
+                    int i = ((n2 * output.stride) + n1) * 3;
+                    output.buf[i+1] = 0;
+                }
+            }
+
+            // Put red dot in centre of block
+            output.buf[centre] = 0;
+            output.buf[centre+1] = 0;
+            output.buf[centre+2] = 1;
+
+            // Put green dot at end of motion vector
+            output.buf[end] = 0;
+            output.buf[end+1] = 1;
+            output.buf[end+2] = 0;
+
+            // Next block
+            index++;
+        }
+    }
+
+    export_image_as_bmp(&output, outputFile);
 
     
 
