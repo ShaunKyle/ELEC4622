@@ -40,6 +40,7 @@ int export_image_as_bmp(image *image_info, const char *fname);
 int export_image_and_border_as_bmp(image *image_info, const char *fname);
 void copy_image(image *image_info, image *image_copy, int border);
 void init_image(image *image_in, int rows, int cols, int border, int planes);
+void mono_to_RGB(image *mono, image *rgb);
 // TODO: delete_image?
 
 // Image processing

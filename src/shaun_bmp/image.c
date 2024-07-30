@@ -273,6 +273,46 @@ void init_image(image *image_in, int rows, int cols, int border, int planes) {
         (border * image_in->stride + border) * planes;
 }
 
+//! \brief Create RGB copy of monochrome image
+void mono_to_RGB(image *mono, image *rgb) {
+    // Constants between the source and destination images
+    const int width = mono->cols;
+    const int height = mono->rows;
+    const int planes = 3;
+    const int border = mono->border;
+    const int stride = mono->stride;
+    
+    // Copied image info
+    rgb->cols = width;
+    rgb->rows = height;
+    rgb->num_components = planes;
+    rgb->border = border;
+    rgb->stride = stride;
+
+    // Allocate memory to hold boundary extended image
+    pixel_t *handle = malloc(
+        stride * (height + 2*border) * planes * sizeof(pixel_t)
+    );
+    rgb->handle = handle;
+    rgb->buf = handle + (((border * stride) + border) * planes);
+
+    // Copy image data from mono to rgb, row by row.
+    for (int row = 0; row < height; row++) {
+        // Row ptrs
+        pixel_t *source = mono->buf + row * mono->stride;
+        pixel_t *dest = rgb->buf + row * rgb->stride * planes;
+
+        // Copy same column pixel for all three planes
+        for (int c = 0; c < width; c++) {
+            dest[c*planes] = source[c];
+            dest[c*planes+1] = source[c];
+            dest[c*planes+2] = source[c];
+        }
+    }
+
+    // Remember to perform boundary extension if needed...
+}
+
 
 //////////////////////
 // Image processing //
