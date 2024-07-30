@@ -17,7 +17,7 @@ int start_col, int block_size, int search_bound, norm_e norm_choice) {
     const int planes = source->num_components;
 
     mvector_t vec, best_vec;
-    pixel_t norm, best_norm;
+    pixel_t norm, best_norm, mse, best_mse;
 
     best_norm = 256*B*B;  //TODO: Why 256?
 
@@ -45,6 +45,7 @@ int start_col, int block_size, int search_bound, norm_e norm_choice) {
             pixel_t *target_p = target->buf + 
                 (start_row * target->stride + start_col) * planes;
             norm = 0;
+            mse = 0;
             for (int r = 0; r < B; r++) {
                 for (int c = 0; c < B; c++) {
                     const int stride = source->stride;  //assume target is same
@@ -65,6 +66,7 @@ int start_col, int block_size, int search_bound, norm_e norm_choice) {
                         // puts("Chosen norm: Mean absolute difference");
                         norm += (diff < 0) ? (-diff) : diff;
                     }
+                    mse += (diff*diff);
                 }
             }
 
@@ -73,11 +75,13 @@ int start_col, int block_size, int search_bound, norm_e norm_choice) {
                 best_norm = norm;
                 best_vec = vec;
                 // printf("DEBUG: (%d, %d) norm is %f\n", best_vec.x, best_vec.y, best_norm);
+                best_mse = mse;
             }
         }
     }
 
-    printf("DEBUG: (%d, %d) norm is %f\n", best_vec.x, best_vec.y, best_norm);
+    // printf("DEBUG: (%d, %d) norm is %f\n", best_vec.x, best_vec.y, best_norm);
+    printf("MSE (tgt to displaced ref): %f\n", best_mse);
     return best_vec;
 }
 

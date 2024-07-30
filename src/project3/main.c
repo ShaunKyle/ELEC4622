@@ -176,8 +176,8 @@ int main (int argc, char *argv[]) {
             );
 
             // Information about block motion
-            printf("Block %d\nStarting pos: [%d, %d]\n", index, c, r);
-            printf("vec(%d, %d)\n\n", vec[index].x, vec[index].y);
+            // printf("Block %d\nStarting pos: [%d, %d]\n", index, c, r);
+            // printf("vec(%d, %d)\n\n", vec[index].x, vec[index].y);
 
             // Next block
             index++;
