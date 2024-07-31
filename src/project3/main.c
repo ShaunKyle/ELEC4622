@@ -171,22 +171,35 @@ int main (int argc, char *argv[]) {
     printf("No. of blocks: %d\n\n", N_BLOCKS);
     mvector_t vec[N_BLOCKS];
     mvector2_t vec2[N_BLOCKS];
+
+    double mse[N_BLOCKS];
+    double mse2[N_BLOCKS];
     for (int index = 0, r = 0; r < (target.rows - B); r += B) {
         for (int c = 0; c < (target.cols - B); c += B) {
             vec[index] = estimate_motion_block(&source, &target, r, c, B, S, 
-                (minimizeMSEFlag ? MSE : MAD)
+                (minimizeMSEFlag ? MSE : MAD), &mse[index]
             );
             // printf("vec[%d] = (%d, %d)\n", index, vec[index].x, vec[index].y);
 
             // Task 3: Half-pel grid
-            vec2[index] = estimate_motion_block_bilinear(&source, &target, r, c, B, S, 
-                (minimizeMSEFlag ? MSE : MAD), 2
-            );
+            // vec2[index] = estimate_motion_block_bilinear(&source, &target, r, c, B, S, 
+            //     (minimizeMSEFlag ? MSE : MAD), 4, &mse2[index]
+            // );
 
             // // Task 4: Quarter-pel grid
             // vec2[index] = estimate_motion_block_bilinear(&source, &target, r, c, B, S, 
             //     (minimizeMSEFlag ? MSE : MAD), 4
             // );
+
+            // // Task 5: Quarter-pel grid with windowed shifted sinc
+            // vec2[index] = estimate_motion_block_sinc(&source, &target, r, c, B, S, 
+            //     (minimizeMSEFlag ? MSE : MAD)
+            // );
+
+            // Task 6: Half-pel telescopic search
+            vec2[index] = estimate_motion_block_telescopic(&source, &target, r, c, B, S, 
+                (minimizeMSEFlag ? MSE : MAD), &mse2[index]
+            );
 
             // Information about block motion
             // printf("Block %d\nStarting pos: [%d, %d]\n", index, c, r);
@@ -196,6 +209,28 @@ int main (int argc, char *argv[]) {
             index++;
         }
     }
+
+    double sum_mse = 0;
+    for (int n = 0; n < N_BLOCKS; n++) {
+        if (mse[n] < 0)
+            continue;
+        if (mse[n] > 10000.0)
+            continue;
+        sum_mse += mse[n];
+        // printf("%f\n", mse[n]);
+    }
+    double sum_mse2 = 0;
+    for (int n = 0; n < N_BLOCKS; n++) {
+        if (mse2[n] < 0)
+            continue;
+        if (mse2[n] > 10000.0)
+            continue;
+        sum_mse2 += mse2[n];
+        // printf("%f\n", mse[n]);
+    }
+    
+    printf("\nTotal image MSE: %f\n\n", sum_mse);
+    printf("\nTotal bilinear2 image MSE: %f\n\n", sum_mse2);
 
     // Perform motion compensation on target frame
     // copy_image(&target, &target2, 0);
@@ -209,7 +244,7 @@ int main (int argc, char *argv[]) {
             compensate_motion_block(&source, &blank, vec[index], r, c, B);
             compensate_motion_block_fractional(&source, &blank2, vec2[index], 
             r, c, B);
-            printf("vec[%d] = (%d, %d)\n", index, vec[index].x, vec[index].y);
+            // printf("vec[%d] = (%d, %d)\n", index, vec[index].x, vec[index].y);
 
             // Next block
             index++;

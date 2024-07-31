@@ -24,15 +24,22 @@ typedef enum norm_type norm_e;
 
 mvector_t estimate_motion_block(
     image *source, image *target, int start_row, int start_col, 
-    int block_size, int search_bounds, norm_e norm
+    int block_size, int search_bounds, norm_e norm,
+    double *mse_out // hack
 );
 mvector2_t estimate_motion_block_bilinear(
     image *source, image *target, int start_row, int start_col, 
-    int block_size, int search_bounds, norm_e norm, int g_inv
+    int block_size, int search_bounds, norm_e norm, int g_inv,
+    double *mse_out // hack
 );
 mvector2_t estimate_motion_block_sinc(
     image *source, image *target, int start_row, int start_col, 
     int block_size, int search_bounds, norm_e norm
+);
+mvector2_t estimate_motion_block_telescopic(
+    image *source, image *target, int start_row, int start_col, 
+    int block_size, int search_bounds, norm_e norm,
+    double *mse_out // hack
 );
 void compensate_motion_block(
     image *source, image *target, mvector_t vec, 
